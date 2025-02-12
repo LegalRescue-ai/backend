@@ -10,7 +10,11 @@ dotenv.config();
 async function bootstrap() {
 const app = await NestFactory.create(AppModule);
 const cors = require('cors');
-app.use(cors({ origin: 'http://localhost:3000' }));
+app.use(cors({ 
+  origin:
+   'http://localhost:3000', 
+   'https://tonnel-test-client.d34j9mhleth3x6.amplifyapp.com/signupChoice'
+   }));
   app.useGlobalPipes(new ValidationPipe({
     whitelist:true,
     transform:true,
