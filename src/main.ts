@@ -14,9 +14,6 @@ async function bootstrap() {
       'http://localhost:3000', 
       'https://tonnel-test-client.d34j9mhleth3x6.amplifyapp.com'
     ],
-    credentials: true, // If using cookies or authorization headers
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   // Global validation pipe
