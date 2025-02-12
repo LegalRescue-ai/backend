@@ -14,7 +14,7 @@ app.use(cors({
   origin:
   [
    'http://localhost:3000', 
-   'https://tonnel-test-client.d34j9mhleth3x6.amplifyapp.com/signupChoice']
+   'https://tonnel-test-client.d34j9mhleth3x6.amplifyapp.com']
 }));
   app.useGlobalPipes(new ValidationPipe({
     whitelist:true,
