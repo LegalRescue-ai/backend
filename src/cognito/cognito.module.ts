@@ -14,7 +14,7 @@ import { SupabaseModule } from 'src/casesubmission/supabase.module';
         userPoolId: configService.get<string>('COGNITO_USER_POOL_ID'),
         clientId: configService.get<string>('COGNITO_CLIENT_ID'),
         clientSecret: configService.get<string>('COGNITO_CLIENT_SECRET'),
-        awsRegion: configService.get<string>('AWS_REGION'),
+        awsRegion: configService.get<string>('REGION'),
       }),
     },
     {
