@@ -202,6 +202,22 @@ export class AttorneyAuthController {
     );
   }
 
+@Post('attorney/change-password')
+@UseGuards(JwtAuthGuard)
+@HttpCode(HttpStatus.OK)
+async changePassword(
+  @Request() req:any,
+  @Body() body: { oldPassword: string; newPassword: string }
+) {
+  const { oldPassword, newPassword } = body;
+  const email = req.user.email;
+  return await this.cognitoService.changeAttorneyPassword(
+    email,
+    oldPassword,
+    newPassword
+  );
+}
+
 
   @Get('/attorney/getAll')
   @HttpCode(HttpStatus.OK)

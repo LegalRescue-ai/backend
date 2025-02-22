@@ -630,7 +630,7 @@ private async createBillingPortalSession(
       
       const { error } = await supabase
         .from('attorney_subscriptions')
-        .update({ subscriptionStatus: 'cancelled' })
+        .delete()
         .eq('stripesubscriptionid', subscription.id);
 
       if (error) {

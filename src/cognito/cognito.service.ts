@@ -18,6 +18,8 @@ import {
   ResendConfirmationCodeCommand,
   ConfirmForgotPasswordCommand,
   ForgotPasswordCommand,
+  AdminSetUserPasswordCommand,
+  VerifyUserAttributeCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import * as crypto from 'crypto';
 
@@ -88,18 +90,15 @@ export class CognitoService {
     password: string;
     username: string;
     phone_number: string;
-    first_name: string;
-    last_name: string;
+
   }): Promise<any> {
-    const { email, password, username, phone_number, first_name, last_name } =
+    const { email, password, username, phone_number} =
       userDetails;
     const secretHash = this.computeSecretHash(username);
 
     const userAttributes = [
       { Name: 'email', Value: email },
-      { Name: 'phone_number', Value: phone_number },
-      { Name: 'given_name', Value: first_name },
-      { Name: 'family_name', Value: last_name },
+      { Name: 'phone_number', Value: phone_number }
     ];
 
     const command = new SignUpCommand({
@@ -114,8 +113,6 @@ export class CognitoService {
       const response = await this.cognitoClient.send(command);
       return response;
     } catch (error) {
-      console.error('Failed to register user:', error);
-
       if (error.__type === 'UsernameExistsException') {
         throw new ConflictException(
           'An account with this email already exists. Please try logging in instead.',
@@ -157,7 +154,7 @@ export class CognitoService {
         response: response,
       };
     } catch (error) {
-      console.error('Error confirming user signup:', error);
+     
 
       switch (error.__type) {
         case 'CodeMismatchException':
@@ -200,7 +197,7 @@ export class CognitoService {
         response: response,
       };
     } catch (error) {
-      console.error('Error resending confirmation code:', error);
+    
 
       switch (error.__type) {
         case 'UserNotFoundException':
@@ -269,31 +266,99 @@ export class CognitoService {
   }
 
 
-
   async updateAttorneyUser(
     accessToken: string,
     updatedUserAttributes: UpdateUserProfileDto,
-  ): Promise<any> {
+  ): Promise<{ 
+    success: boolean; 
+    message: string;
+    requiresVerification: boolean;
+    attributeToVerify?: 'email' | 'phone_number';
+  }> {
+    const verifiableAttributes = ['email', 'phone_number'];
+    
+    
+    const invalidAttributes = Object.keys(updatedUserAttributes)
+      .filter(attr => !verifiableAttributes.includes(attr));
+      
+    if (invalidAttributes.length > 0) {
+      throw new BadRequestException(
+        'Only email and phone number can be updated.'
+      );
+    }
+  
     const userAttributes = Object.entries(updatedUserAttributes)
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       .filter(([_, value]) => value !== undefined)
       .map(([Name, Value]) => ({ Name, Value }));
-
+  
     const command = new UpdateUserAttributesCommand({
       AccessToken: accessToken,
       UserAttributes: userAttributes,
     });
-
+  
     try {
-      const response = await this.cognitoClient.send(command);
-      console.log('User profile updated successfully:', response);
-      return response;
+      await this.cognitoClient.send(command);
+      
+      
+      const attributeToVerify = Object.keys(updatedUserAttributes)[0] as 'email' | 'phone_number';
+      
+      return { 
+        success: true,
+        message: `${attributeToVerify} update initiated. Please check your ${attributeToVerify === 'email' ? 'email' : 'phone'} for a verification code.`,
+        requiresVerification: true,
+        attributeToVerify
+      };
+  
     } catch (error) {
-      console.error('Failed to update user profile:', error);
-      throw new Error(`Update failed: ${error.message || error}`);
+      switch (error.__type) {
+        case 'NotAuthorizedException':
+          throw new UnauthorizedException('Your session has expired. Please sign in again.');
+        case 'UserNotFoundException':
+          throw new NotFoundException('User account not found.');
+        case 'InvalidParameterException':
+          throw new BadRequestException('Invalid email or phone number format.');
+        case 'CodeDeliveryFailureException':
+          throw new ServiceUnavailableException('Unable to send verification code.');
+        case 'LimitExceededException':
+          throw new BadRequestException('Too many attempts. Please try again later.');
+        default:
+          throw new InternalServerErrorException('Failed to update profile. Please try again.');
+      }
     }
   }
-
+  
+ 
+  async confirmAttributeUpdate(
+    accessToken: string,
+    attributeName: 'email' | 'phone_number',
+    code: string
+  ): Promise<{ success: boolean; message: string }> {
+    const command = new VerifyUserAttributeCommand({
+      AccessToken: accessToken,
+      AttributeName: attributeName,
+      Code: code
+    });
+  
+    try {
+      await this.cognitoClient.send(command);
+      return {
+        success: true,
+        message: `Your ${attributeName} has been verified successfully.`
+      };
+    } catch (error) {
+      switch (error.__type) {
+        case 'CodeMismatchException':
+          throw new BadRequestException('Invalid verification code. Please try again.');
+        case 'ExpiredCodeException':
+          throw new BadRequestException('Verification code has expired. Please request a new code.');
+        case 'NotAuthorizedException':
+          throw new UnauthorizedException('Your session has expired. Please sign in again.');
+        default:
+          throw new InternalServerErrorException('Failed to verify attribute. Please try again.');
+      }
+    }
+  }
   async initiateAttorneyForgotPassword(email: string): Promise<any> {
     const secretHash = this.computeSecretHash(email);
 
@@ -376,6 +441,45 @@ export class CognitoService {
           throw new InternalServerErrorException(
             'Could not reset password. Please try again later.',
           );
+      }
+    }
+  }
+
+  async changeAttorneyPassword(email: string, oldPassword: string, newPassword: string) {
+    try {
+     
+      const authCommand = new InitiateAuthCommand({
+        AuthFlow: 'USER_PASSWORD_AUTH',
+        ClientId: this.config.clientId,
+        AuthParameters: {
+          USERNAME: email,
+          PASSWORD: oldPassword,
+          SECRET_HASH: this.computeSecretHash(email)
+        },
+      });
+  
+    
+      const updateCommand = new AdminSetUserPasswordCommand({
+        UserPoolId: this.config.userPoolId,
+        Username: email,
+        Password: newPassword,
+        Permanent: true
+      });
+  
+      await this.cognitoClient.send(authCommand);
+      await this.cognitoClient.send(updateCommand);
+  
+      return { success: true, message: 'Your password has been successfully updated' };
+    } catch (error) {
+      switch (error.__type) {
+        case 'NotAuthorizedException':
+          throw new UnauthorizedException('The current password you entered is incorrect');
+        case 'InvalidPasswordException':
+          throw new BadRequestException('Password must be at least 8 characters with uppercase, lowercase, number and special character');
+        case 'LimitExceededException':
+          throw new BadRequestException('Too many attempts. Please try again in a few minutes');
+        default:
+          throw new InternalServerErrorException('Failed to change password. Please try again');
       }
     }
   }

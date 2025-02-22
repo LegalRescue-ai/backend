@@ -13,7 +13,7 @@ import { StripeService } from 'src/stripe/Stripe.service';
 import { SupabaseService } from 'src/supabase/supabase.service';
 import { AttorneySignUpDTO } from 'src/waitlist/dto/attorney_signUp_dto';
 import { UpdateAttorneyDto } from 'src/waitlist/dto/attorney_Update_dto copy';
-import { Express } from 'express';
+
 
 const TABLES = {
   WAITLIST: 'waitlist',
@@ -129,13 +129,13 @@ export class AttorneyAuthService {
 
   async updateAttorneyDetails(email: string, data: UpdateAttorneyDto) {
     try {
-      // Verify attorney exists
+     
       const attorney = await this.findAttorneyByEmail(email);
       if (!attorney) {
         throw new NotFoundException('Attorney user not found');
       }
 
-      // Update attorney details
+      
       const updatedUser = await this.updateAttorneyUser(email, data);
       return updatedUser;
     } catch (error) {
@@ -172,6 +172,7 @@ export class AttorneyAuthService {
       fileName,
     };
   }
+  
   
 
   async deleteAttorney(email: string): Promise<string> {
