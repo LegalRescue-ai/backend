@@ -18,8 +18,8 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { AttorneyAuthService } from './attorney-auth.service';
-import { AttorneySignUpDTO } from 'src/waitlist/dto/attorney_signUp_dto';
-import { UpdateAttorneyDto } from 'src/waitlist/dto/attorney_Update_dto copy';
+import { AttorneySignUpDTO } from 'src/attorney-auth/dto/attorney_signUp_dto';
+import { UpdateAttorneyDto } from 'src/attorney-auth/dto/attorney_Update_dto copy';
 import { ValidationConfig } from 'src/config';
 import { CreateAuthDto } from 'src/cognito/dto/create-auth.dto';
 import { LoginUserDto } from 'src/cognito/dto/login_user.dto';

@@ -11,8 +11,8 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { DiscountService } from 'src/discount/discount.service';
 import { StripeService } from 'src/stripe/stripe.service';
 import { SupabaseService } from 'src/supabase/supabase.service';
-import { AttorneySignUpDTO } from 'src/waitlist/dto/attorney_signUp_dto';
-import { UpdateAttorneyDto } from 'src/waitlist/dto/attorney_Update_dto copy';
+import { AttorneySignUpDTO } from 'src/attorney-auth/dto/attorney_signUp_dto';
+import { UpdateAttorneyDto } from 'src/attorney-auth/dto/attorney_Update_dto copy';
 
 
 const TABLES = {

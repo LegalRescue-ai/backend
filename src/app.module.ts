@@ -1,9 +1,6 @@
 /* eslint-disable prettier/prettier */
 // app.module.ts
 import { Module } from '@nestjs/common';
-import { WaitlistModule } from './waitlist/waitlist.module'; 
-import { MailerModule } from './mailer/mailer.module';
-import { RecaptchaModule } from './recaptcha/recaptcha.module';
 import { DiscountService } from './discount/discount.service';
 import { AttorneyAuthModule } from './attorney-auth/attorney-auth.module';
 import { ConfigModule } from "@nestjs/config";
@@ -16,7 +13,7 @@ import { CognitoModule } from './cognito/cognito.module';
 import { IdpAuthModule } from './AttorneyIdp/idp-auth.module';
 
 @Module({
-  imports: [WaitlistModule, IdpAuthModule, MailerModule, DiscountModule, RecaptchaModule, AttorneyAuthModule,
+  imports: [ IdpAuthModule, DiscountModule,  AttorneyAuthModule,
     ConfigModule.forRoot({
       isGlobal: true
     }),
