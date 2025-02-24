@@ -4,8 +4,10 @@ import { AppModule } from './app.module';
 import * as express from 'express';
 import { ValidationPipe } from '@nestjs/common';
 import * as session from 'express-session';
-
 import { ExpressAdapter } from '@nestjs/platform-express';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, new ExpressAdapter(), {
@@ -16,14 +18,14 @@ async function bootstrap() {
     '/api/v1/payments/webhook',
     express.raw({ type: 'application/json' }),
   );
+
   app.use(
     session({
-      secret:
-        '28b79342b50eb24e200ba9ee21fa2974e89b31b491c6855f37bf7e31e8096b724b5ecd9e38d3265afcd6b8411f33210b6971c0d08f229b71a9a548740c01380d',
+      secret: process.env.SESSION_SECRET,
       resave: false,
       saveUninitialized: false,
       cookie: {
-        secure: false,
+        secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000,
       },
@@ -54,18 +56,16 @@ async function bootstrap() {
       'https://www.legalrescue.ai',
       'https://main.d1d7vpftwumgan.amplifyapp.com',
       'https://dev.d1wv5zmnajfzzh.amplifyapp.com',
+      'https://attorney-test.dp1dsrlz16brp.amplifyapp.com/'
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'x-refresh-token',  
-    ],
-    exposedHeaders: ['new-id-token'], 
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-refresh-token'],
+    exposedHeaders: ['new-id-token'],
     credentials: true,
   });
 
-
+ 
   await app.listen(3001);
 }
+
 bootstrap();

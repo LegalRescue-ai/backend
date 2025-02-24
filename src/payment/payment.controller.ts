@@ -10,7 +10,7 @@ import {
    
   } from '@nestjs/common';
   import { Request, Response } from 'express';
-import { StripeService } from 'src/stripe/Stripe.service';
+import { StripeService } from 'src/stripe/stripe.service';
 import { DiscountTier } from 'src/types';
 
   @Controller('payments')

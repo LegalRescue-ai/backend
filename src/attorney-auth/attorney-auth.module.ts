@@ -5,7 +5,7 @@ import { AttorneyAuthController } from './attorney-auth.controller';
 import { SupabaseService } from 'src/supabase/supabase.service';
 import { DiscountService } from 'src/discount/discount.service';
 import { StripeModule } from 'src/stripe/stripe.module';
-import { StripeService } from 'src/stripe/Stripe.service';
+import { StripeService } from 'src/stripe/stripe.service';
 import { CognitoModule } from 'src/cognito/cognito.module';
 
 
