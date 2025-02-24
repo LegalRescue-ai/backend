@@ -25,7 +25,7 @@ async function bootstrap() {
     validationError: { target: false, value: false },
   }));
 
-  await app.listen(process.env.PORT ?? 3001);
-  console.log(`Server is running on port ${process.env.PORT ?? 3001}`);
+  await app.listen(process.env.PORT ?? 3002);
+  console.log(`Server is running on port ${process.env.PORT ?? 3002}`);
 }
 bootstrap();
