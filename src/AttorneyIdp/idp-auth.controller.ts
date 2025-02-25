@@ -119,8 +119,6 @@ export class IdpAuthController {
       }
 
       const authUrl = `${this.configService.get('COGNITO_DOMAIN')}/oauth2/authorize?${params.toString()}`;
-      console.log(authUrl);
-      
 
       return {
         authUrl,
@@ -172,8 +170,6 @@ export class IdpAuthController {
   private async getTokens(code: string, redirectUri: string, codeVerifier: string): Promise<TokenResponse> {
     try {
       const tokenEndpoint = `${this.configService.get('COGNITO_DOMAIN')}/oauth2/token`;
-      console.log("tokenEndpoint", tokenEndpoint);
-      
       const clientId = this.configService.get('COGNITO_CLIENT_ID');
       const clientSecret = this.configService.get('COGNITO_CLIENT_SECRET');
 
@@ -211,8 +207,6 @@ export class IdpAuthController {
   private async getUserInfo(accessToken: string) {
     try {
       const userinfoEndpoint = `${this.configService.get('COGNITO_DOMAIN')}/oauth2/userInfo`;
-      console.log("userInfoEndpoint", userinfoEndpoint);
-      
       const response = await fetch(userinfoEndpoint, {
         headers: {
           'Authorization': `Bearer ${accessToken}`
