@@ -151,7 +151,7 @@ export class IdpAuthController {
         throw new UnauthorizedException('Missing required parameters');
       }
 
-      console.log(redirect_uri)
+      
 
      
       const tokens = await this.getTokens(code, redirect_uri, codeVerifier);
@@ -182,7 +182,7 @@ export class IdpAuthController {
         code_verifier: codeVerifier,
         redirect_uri: redirectUri,
       });
-      console.log(params)
+      
 
       const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
@@ -194,7 +194,7 @@ export class IdpAuthController {
         },
         body: params.toString(),
       });
-      console.log(response)
+     
 
       if (!response.ok) {
         const errorData = await response.text();
