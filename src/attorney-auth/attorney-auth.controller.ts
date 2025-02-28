@@ -72,7 +72,7 @@ export class AttorneyAuthController {
      
       response.cookie('idToken', result.IdToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure:true,
         sameSite: 'none',
         path: '/',
         maxAge: 60 * 60 * 1000 
@@ -82,7 +82,7 @@ export class AttorneyAuthController {
       if (result.RefreshToken) {
         response.cookie('refreshToken', result.RefreshToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          secure:true,
           sameSite: 'none', 
           path: '/', 
           maxAge: 30 * 24 * 60 * 60 * 1000 
@@ -134,7 +134,7 @@ export class AttorneyAuthController {
       if(tokens.id_token){
         response.cookie('idToken', tokens.id_token, {
           httpOnly: true,
-          secure: process.env.NODE_ENV == 'production',
+          secure: true,
           sameSite: 'none',
           maxAge: 60 * 60 *1000
         })

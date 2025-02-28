@@ -101,7 +101,7 @@ export class JwtAuthGuard implements CanActivate {
     private setAuthCookies(response: Response, idToken: string, refreshToken: string): void {
         response.cookie('idToken', idToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            secure: true,
             sameSite: 'none',
             path: '/',
             maxAge: 60 * 60 * 1000
@@ -111,7 +111,7 @@ export class JwtAuthGuard implements CanActivate {
         if (refreshToken) {
             response.cookie('refreshToken', refreshToken, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
+                secure: true,
                 sameSite: 'none',
                 path: '/', 
                 maxAge: 7 * 24 * 60 * 60 * 1000

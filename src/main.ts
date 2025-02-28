@@ -32,7 +32,7 @@ async function bootstrap() {
       },
     }),
   );
-  app.use(cookieParser())
+ 
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -53,18 +53,15 @@ async function bootstrap() {
 
   app.enableCors({
     origin: [
-      'https://nextjs-boilerplate-five-opal-54.vercel.app',
       'http://localhost:3000',
-      'https://www.legalrescue.ai',
-      'https://main.d1d7vpftwumgan.amplifyapp.com',
-      'https://dev.d1wv5zmnajfzzh.amplifyapp.com',
       'https://attorney-test.dp1dsrlz16brp.amplifyapp.com'
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-refresh-token'],
-    exposedHeaders: ['new-id-token'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   });
+
+  app.use(cookieParser())
 
  
   await app.listen(3001);

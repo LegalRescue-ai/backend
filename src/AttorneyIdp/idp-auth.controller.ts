@@ -152,7 +152,6 @@ export class IdpAuthController {
   {
     try {
       const { code, redirect_uri, codeVerifier, provider } = body;
-      console.log(redirect_uri)
       if (!code || !redirect_uri || !provider) {
         throw new UnauthorizedException('Missing required parameters');
       }
@@ -166,7 +165,7 @@ export class IdpAuthController {
 
       response.cookie('idToken', tokens.id_token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV == 'production',
+        secure: true,
         sameSite:'none',
         path: '/',
         maxAge: 60 * 60 * 1000
@@ -174,7 +173,7 @@ export class IdpAuthController {
 
       response.cookie('refreshToken', tokens.refresh_token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV == 'production',
+        secure: true,
         sameSite:'none',
         path: '/',
         maxAge: 30 * 24 * 60 * 60 * 1000 
