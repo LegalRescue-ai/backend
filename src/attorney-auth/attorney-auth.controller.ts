@@ -27,6 +27,7 @@ import { JwtAuthGuard } from 'src/Guards/auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {Response} from 'express'
 
+
 @Controller('auth')
 export class AttorneyAuthController {
   constructor(
