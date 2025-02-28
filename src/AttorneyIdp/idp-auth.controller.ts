@@ -157,6 +157,8 @@ export class IdpAuthController {
         throw new UnauthorizedException('Missing required parameters');
       }
 
+      
+
      
       const tokens = await this.getTokens(code, redirect_uri, codeVerifier);
       const userInfo = await this.getUserInfo(tokens.access_token);
@@ -203,6 +205,7 @@ export class IdpAuthController {
         code_verifier: codeVerifier,
         redirect_uri: redirectUri,
       });
+      
 
       const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
@@ -214,9 +217,11 @@ export class IdpAuthController {
         },
         body: params.toString(),
       });
+     
 
       if (!response.ok) {
         const errorData = await response.text();
+        console.log(errorData)
         throw new Error(`Token exchange failed: ${errorData}`);
       }
 
