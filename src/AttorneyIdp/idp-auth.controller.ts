@@ -8,7 +8,8 @@ import {
   UnauthorizedException,
   InternalServerErrorException,
   Post,
-  Body
+  Body,
+  Res
 } from '@nestjs/common';
 import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
@@ -17,6 +18,7 @@ import {
 } from '@aws-sdk/client-cognito-identity-provider';
 import * as crypto from 'crypto';
 import { IdpConfigService } from './idp-config.service';
+import {Response} from 'express'
 
 declare module 'express' {
   interface Request {
@@ -142,11 +144,15 @@ export class IdpAuthController {
       redirect_uri: string,
       codeVerifier: string,
       provider: string
-    }
-  ) {
+    },
+    @Res({passthrough:true}) response: Response
+  )
+ 
+  
+  {
     try {
       const { code, redirect_uri, codeVerifier, provider } = body;
-
+      console.log(redirect_uri)
       if (!code || !redirect_uri || !provider) {
         throw new UnauthorizedException('Missing required parameters');
       }
@@ -154,8 +160,25 @@ export class IdpAuthController {
      
       const tokens = await this.getTokens(code, redirect_uri, codeVerifier);
       const userInfo = await this.getUserInfo(tokens.access_token);
+
+
+      response.cookie('idToken', tokens.id_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV == 'production',
+        sameSite:'strict',
+        path: '/api/v1',
+        maxAge: 60 * 60 * 1000
+      });
+
+      response.cookie('refreshToken', tokens.refresh_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV == 'production',
+        sameSite:'strict',
+        path: '/api/v1',
+        maxAge: 30 * 24 * 60 * 60 * 1000 
+      })
+      
       return {
-        ...tokens,
         email: userInfo.email,
         cognitoSub: userInfo.sub
       };

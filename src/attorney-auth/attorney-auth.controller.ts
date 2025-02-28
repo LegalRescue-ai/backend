@@ -9,13 +9,12 @@ import {
   Patch,
   Post,
   UsePipes,
-  Get,
-  Query,
-  Param,
   UseGuards,
   Request,
   UseInterceptors,
   UploadedFile,
+  Res,
+  Req,
 } from '@nestjs/common';
 import { AttorneyAuthService } from './attorney-auth.service';
 import { AttorneySignUpDTO } from 'src/attorney-auth/dto/attorney_signUp_dto';
@@ -26,6 +25,7 @@ import { LoginUserDto } from 'src/cognito/dto/login_user.dto';
 import { CognitoService } from 'src/cognito/cognito.service';
 import { JwtAuthGuard } from 'src/Guards/auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
+import {Response} from 'express'
 
 @Controller('auth')
 export class AttorneyAuthController {
@@ -33,6 +33,8 @@ export class AttorneyAuthController {
     private readonly attorneyService: AttorneyAuthService,
     private cognitoService: CognitoService,
   ) {}
+
+ 
 
   @Post('/register')
   async register(@Body() registerUserDto: CreateAuthDto) {
@@ -53,13 +55,99 @@ export class AttorneyAuthController {
     return this.cognitoService.resendAttorneyConfirmationCode(email)
   }
 
+  
   @Post('/login')
-  async signin(@Body() loginUserDto: LoginUserDto) {
-    return this.cognitoService.loginAttorneyUser(
+  async signin(
+    @Body() loginUserDto: LoginUserDto,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    const result = await this.cognitoService.loginAttorneyUser(
       loginUserDto.username,
       loginUserDto.password,
     );
+    
+   
+    if (result.IdToken) {
+     
+      response.cookie('idToken', result.IdToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/api/v1',
+        maxAge: 60 * 60 * 1000 
+      });
+      
+     
+      if (result.RefreshToken) {
+        response.cookie('refreshToken', result.RefreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict', 
+          path: '/api/v1', 
+          maxAge: 30 * 24 * 60 * 60 * 1000 
+        });
+      }
+    }
+    
+
+    return {
+      success: true,
+      message: 'Login successful',
+      email: loginUserDto.username,
+      expiresIn: result.ExpiresIn
+    };
   }
+
+  @Post('/refresh')
+  @HttpCode(HttpStatus.OK)
+  async refreshToken(@Req() request:any, @Res({passthrough:true}) response: Response){
+    const refreshToken = request.cookies['refreshToken']
+    const credentials = Buffer.from(`${process.env.COGNITO_CLIENT_ID}:${process.env.COGNITO_CLIENT_SECRET}`).toString('base64');
+
+    if(!refreshToken){
+      throw new HttpException('No refresh token provided', HttpStatus.UNAUTHORIZED);  
+    }
+
+    try{
+      const tokenEndpoint = `${process.env.COGNITO_DOMAIN}/oauth2/token`
+
+      const tokenResponse = await fetch(tokenEndpoint, {
+       method: 'POST',
+       headers: {'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${credentials}`
+       },
+       body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        client_id: process.env.COGNITO_CLIENT_ID,
+        refresh_token: refreshToken,
+       }),
+      });
+      
+      
+      if(!tokenResponse.ok){
+        throw new HttpException('Invalid refresh token', HttpStatus.UNAUTHORIZED);
+      }
+
+      const tokens = await tokenResponse.json()
+
+      if(tokens.id_token){
+        response.cookie('idToken', tokens.id_token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV == 'production',
+          sameSite: 'strict',
+          maxAge: 60 * 60 *1000
+        })
+      }
+
+      return {success: true}
+
+
+    }catch(error:any){
+      console.error('Error refreshing token:', error)
+      throw new HttpException('Failed to refresh token', HttpStatus.UNAUTHORIZED)
+    }
+  }
+
 
   @Post('/attorney/signup')
   @HttpCode(HttpStatus.CREATED)
@@ -218,61 +306,16 @@ async changePassword(
   );
 }
 
+@Post('/logout')
+@HttpCode(HttpStatus.OK)
+async logout(@Res({passthrough: true}) response:Response){
+  response.clearCookie('idToken', {path: '/api/v1'});
+  response.clearCookie('refreshToken', {path: '/api/v1'});;
 
-  @Get('/attorney/getAll')
-  @HttpCode(HttpStatus.OK)
-  async getAllAttorneys(
-    @Query()
-    query: {
-      page?: number;
-      limit?: number;
-      state?: string;
-      practiceArea?: string;
-      accountType?: string;
-      subscriptionStatus?: string;
-      isActive?: boolean;
-      sortBy?: string;
-    },
-  ) {
-    const {
-      page = 1,
-      limit = 10,
-      state,
-      practiceArea,
-      accountType,
-      subscriptionStatus,
-      isActive,
-      sortBy = 'lastName',
-    } = query;
-    const attorneys = await this.attorneyService.getAllAttorneys({
-      page,
-      limit,
-      state,
-      practiceArea,
-      accountType,
-      subscriptionStatus,
-      isActive,
-      sortBy,
-    });
-    return attorneys;
-  }
+  return {success:true}
+}
 
-  @Get('/attorney/:id')
-  @HttpCode(HttpStatus.OK)
-  async getAttorneyById(@Param('id') id: string) {
-    try {
-      const attorney = await this.attorneyService.getAttorneyById(id);
-      if (!attorney) {
-        throw new HttpException(
-          `Attorney with id ${id} was not found`,
-          HttpStatus.NOT_FOUND,
-        );
-      }
-      return attorney;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
+
 
   private handleError(error: any) {
     console.error('Attorney Auth Error:', error);

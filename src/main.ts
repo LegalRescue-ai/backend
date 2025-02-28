@@ -6,6 +6,7 @@ import { ValidationPipe } from '@nestjs/common';
 import * as session from 'express-session';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import * as dotenv from 'dotenv';
+import * as cookieParser from 'cookie-parser'
 
 dotenv.config();
 
@@ -31,6 +32,7 @@ async function bootstrap() {
       },
     }),
   );
+  app.use(cookieParser())
 
   app.useGlobalPipes(
     new ValidationPipe({

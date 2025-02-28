@@ -236,8 +236,7 @@ export class CognitoService {
         ...response.AuthenticationResult,
       };
     } catch (error) {
-      console.error('Failed to log in user:', error);
-
+    
       switch (error.__type) {
         case 'NotAuthorizedException':
           throw new UnauthorizedException('Incorrect username or password.');
