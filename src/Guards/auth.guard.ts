@@ -8,6 +8,9 @@ export class JwtAuthGuard implements CanActivate {
     async canActivate(context: ExecutionContext): Promise<boolean> {
         const request = context.switchToHttp().getRequest();
         const response = context.switchToHttp().getResponse<Response>();
+
+        console.log('Request cookies:', request.cookies);
+        console.log('Cookie header:', request.headers.cookie);
         
        
         const idToken = request.cookies?.['idToken'];
@@ -99,8 +102,8 @@ export class JwtAuthGuard implements CanActivate {
         response.cookie('idToken', idToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            path: '/api/v1',
+            sameSite: 'lax',
+            path: '/',
             maxAge: 60 * 60 * 1000
         });
         
@@ -109,8 +112,8 @@ export class JwtAuthGuard implements CanActivate {
             response.cookie('refreshToken', refreshToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                path: '/api/v1', 
+                sameSite: 'lax',
+                path: '/', 
                 maxAge: 7 * 24 * 60 * 60 * 1000
             });
         }

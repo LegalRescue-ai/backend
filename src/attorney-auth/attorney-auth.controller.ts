@@ -73,8 +73,8 @@ export class AttorneyAuthController {
       response.cookie('idToken', result.IdToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        path: '/api/v1',
+        sameSite: 'lax',
+        path: '/',
         maxAge: 60 * 60 * 1000 
       });
       
@@ -83,8 +83,8 @@ export class AttorneyAuthController {
         response.cookie('refreshToken', result.RefreshToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict', 
-          path: '/api/v1', 
+          sameSite: 'lax', 
+          path: '/', 
           maxAge: 30 * 24 * 60 * 60 * 1000 
         });
       }
@@ -310,8 +310,8 @@ async changePassword(
 @Post('/logout')
 @HttpCode(HttpStatus.OK)
 async logout(@Res({passthrough: true}) response:Response){
-  response.clearCookie('idToken', {path: '/api/v1'});
-  response.clearCookie('refreshToken', {path: '/api/v1'});;
+  response.clearCookie('idToken', {path: '/'});
+  response.clearCookie('refreshToken', {path: '/'});;
 
   return {success:true}
 }

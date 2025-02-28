@@ -167,16 +167,16 @@ export class IdpAuthController {
       response.cookie('idToken', tokens.id_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV == 'production',
-        sameSite:'strict',
-        path: '/api/v1',
+        sameSite:'lax',
+        path: '/',
         maxAge: 60 * 60 * 1000
       });
 
       response.cookie('refreshToken', tokens.refresh_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV == 'production',
-        sameSite:'strict',
-        path: '/api/v1',
+        sameSite:'lax',
+        path: '/',
         maxAge: 30 * 24 * 60 * 60 * 1000 
       })
       
