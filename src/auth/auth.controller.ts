@@ -16,26 +16,31 @@ import {
   HttpException,
   HttpStatus,
   Query,
+  UploadedFile,
+  UseInterceptors,
+  Res,
 } from '@nestjs/common';
+
 import { UpdateUserProfileDto } from './dto/update-auth.dto';
 import { CreateAuthDto } from '../auth/dto/create-auth.dto';
 import { CognitoService } from '../cognito/cognito.service';
 import { AuthService } from './auth.service';
 import { LoginUserDto } from './dto/login_user.dto';
+import { SupabaseService } from '../casesubmission/supabase.service';
+import { FileInterceptor } from '@nestjs/platform-express';
+import * as multer from 'multer';
 
-import { JwtService } from "@nestjs/jwt"; // Ensure this is imported
-
-@Controller('auth')
+@Controller('authenticate')
 export class AuthController {
+  userService: any;
+  supabaseUrl = process.env.SUPABASE_URL;
   supabase: any;
-  jwt: any;
-  jwtService: any;
-  supabaseService: any;
   constructor(
     private readonly cognitoService: CognitoService,
     private readonly authService: AuthService,
-  ) {}
-
+    private readonly supabaseService: SupabaseService, // ✅ Properly Injected
+  )
+  {}
 
   @Post('register')
   async register(@Body() registerUserDto: CreateAuthDto) {
@@ -64,7 +69,6 @@ export class AuthController {
       throw new InternalServerErrorException(error.message || 'An unexpected error occurred');
     }
   }
-
 
   @Post('/confirmSignUp') 
   async confirmSignUp(
@@ -99,7 +103,7 @@ export class AuthController {
 
   @Post('resend')
   async resendConfirmationCode(@Body('email') email: string): Promise<any> {
-    if (!email) {
+    if (!email) { 
       throw new BadRequestException('Email address is required.');
     }
 
@@ -125,62 +129,168 @@ export class AuthController {
         'Could not process your request. Please try again later.',
       );
     }
-  }
+  } 
 
-  @Get('user-count')
+  @Get("user-count")
   async getTotalRegisteredUsers() {
     try {
+      console.log("🔍 Fetching total user count from Cognito...");
+  
       const totalUsers = await this.cognitoService.getTotalUsers();
+  
+      if (totalUsers === undefined || totalUsers === null) {
+        throw new InternalServerErrorException("Failed to retrieve user count.");
+      }
+  
+      console.log("✅ Total users retrieved:", totalUsers);
+      
       return {
-        message: 'Total number of registered users',
+        message: "Total number of registered users",
         data: totalUsers,
       };
     } catch (error) {
-      throw new InternalServerErrorException('Error retrieving user count');
+      console.error("❌ Error retrieving user count:", error);
+      throw new InternalServerErrorException("Error retrieving user count");
     }
   }
-
 
   @Get("/user")
   async getUserInfo(@Query("email") email?: string, @Query("id") id?: string) {
+    // 🔹 Check if either email or ID is provided, throw BadRequest if neither is available
     if (!email && !id) {
-      throw new BadRequestException("Email or user ID is required.");
+      throw new BadRequestException("Either email or user ID is required.");
     }
-
+  
+    // 🔹 Log the incoming query params for debugging
+    console.log(`Received request for user with email: "${email}", id: ${id}`);
+  
     try {
-      let query = this.supabaseService.getClient().from("users").select("firstName, lastName, email, zipCode, phoneNumber");
-
+      const supabase = this.supabaseService.getClient();
+      console.log("✅ Supabase client retrieved successfully.");
+  
+      // 🔹 Clean email (remove any spaces or leading/trailing characters)
       if (email) {
-        query = query.eq("email", email);
+        email = email.trim();
+        console.log(`🔹 Filtering by email: "${email}"`);
+      }
+  
+      // 🔹 Build the query based on the presence of email or ID
+      let query = supabase.from("users").select("cognito_id, email, firstname, lastname, zipcode, phonenumber");
+  
+      if (email) {
+        query = query.eq("email", email);  // Filtering by email
       } else if (id) {
-        query = query.eq("cognito_id", id);
+        query = query.eq("cognito_id", id); // Filtering by ID
       }
-
-      const { data: user, error } = await query.single();
-
-      if (error || !user) {
-        throw new NotFoundException("User not found in Supabase.");
+  
+      // 🔹 Execute the query and limit to one result
+      const { data, error } = await query.limit(1); // Limit to 1 row, without calling .single()
+  
+      // 🔹 Log the full query execution details
+      console.log("🔹 Supabase query executed:", query.toString());
+  
+      // 🔹 Handle query errors
+      if (error) {
+        console.error("❌ Supabase query error:", error);
+        throw new InternalServerErrorException("Database query failed. Please try again later.");
       }
-
-      return user;
+  
+      // 🔹 Handle case when no user is found
+      if (!data || data.length === 0) {
+        console.log(`🔹 No user found with ${email ? "email: " + email : "ID: " + id}`);
+        throw new NotFoundException(`No user found with ${email ? "email: " + email : "ID: " + id}`);
+      }
+  
+      // 🔹 Handle case when more than one user is found (data integrity issue)
+      if (data.length > 1) {
+        console.log("❌ Multiple users found with the same email or ID. Data integrity issue.");
+        throw new InternalServerErrorException("Multiple users found with the same criteria. Please check data integrity.");
+      }
+  
+      // 🔹 Return the first user if exactly one user is found
+      console.log("✅ User found:", data[0]);
+      return data[0];
     } catch (error) {
+      // 🔹 Log detailed error for debugging
       console.error("❌ Error fetching user:", error);
-      throw new InternalServerErrorException("Error fetching user information.");
+  
+      // 🔹 Throw specific errors
+      if (error instanceof NotFoundException) {
+        throw error; // Already a specific error message
+      }
+      throw new InternalServerErrorException("An error occurred while fetching user information. Please try again.");
     }
   }
+  
+  
 
-  @Patch("/update-user")
-  async updateUser(@Req() req, @Body() updateUserDto: UpdateUserProfileDto) {
-    const userEmail = req.user.email; // Extracted from JWT
-
-    if (!userEmail) {
-      throw new BadRequestException("Email is required.");
-    }
-
-    try {
-      return await this.cognitoService.updateUserProfile(userEmail, updateUserDto);
-    } catch (error) {
-      throw new InternalServerErrorException("Error updating user information");
-    }
+@Patch("update-user")
+async updateUser(
+  @Body() updateUserDto: UpdateUserProfileDto,
+  @Req() req,
+  @Query("email") email?: string
+) {
+  // Get identifier from query parameters or from the authenticated user
+  const identifier = email || req.user?.email;  // Now only using email
+  console.log("Identifier:", identifier);  // Log identifier
+  
+  // If no identifier found, throw BadRequestException
+  if (!identifier) {
+    console.error("❌ No identifier found (email).");
+    throw new BadRequestException("Email is required.");
   }
+
+  try {
+    // Attempt to update user profile using the identifier
+    console.log("🔄 Updating user profile with identifier:", identifier);
+    return await this.cognitoService.updateUserProfile(identifier, updateUserDto);
+  } catch (error) {
+    // Log the complete error and throw a generic internal server error
+    console.error("❌ Error updating user profile:", error.message || error);
+    throw new InternalServerErrorException("Error updating user information");
+  }
+}
+
+@Post('upload-profile-picture')
+@UseInterceptors(
+  FileInterceptor('file', {
+    storage: multer.diskStorage({
+      destination: (req, file, cb) => {
+        cb(null, './uploads/temp');
+      },
+      filename: (req, file, cb) => {
+        const cognitoId = req.body.cognito_id; // Use cognito_id passed in the request body
+        const filename = `${cognitoId}-${Date.now()}-${file.originalname}`;
+        cb(null, filename);
+      },
+    }),
+  }),
+)
+async uploadProfilePicture(
+  @UploadedFile() file: Express.Multer.File,
+  @Body() body: { cognito_id: string }, // Ensure this is 'cognito_id' not 'cognitoId'
+) {
+  if (!file) {
+    throw new BadRequestException('No file uploaded');
+  }
+
+  if (!body.cognito_id) {
+    throw new BadRequestException('Cognito ID is required');
+  }
+
+  try {
+    const filePath = `uploads/temp/${file.filename}`;
+    const updatedUser = await this.authService.updateProfilePicture(body.cognito_id, filePath); // Use cognito_id
+    return {
+      message: 'Profile picture uploaded successfully',
+      filePath,
+      user: updatedUser,
+    };
+  } catch (error) {
+    console.error('Error during file upload:', error);
+    throw new BadRequestException('Error processing file');
+  }
+}
+
+
 }

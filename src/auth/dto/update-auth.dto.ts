@@ -31,8 +31,14 @@ export class UpdateUserProfileDto {
   @IsOptional()
   @IsString()
   zipcode: string;
-  firstName: string;
-  lastName: string;
-  phoneNumber: string;
-  zipCode: string;
+
+  
+  @IsOptional()
+  @IsString()
+  firstname: string;
+
+  
+  @IsOptional()
+  @IsString()
+  lastname: string;
 }
