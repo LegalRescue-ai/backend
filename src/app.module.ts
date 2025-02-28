@@ -4,9 +4,10 @@ import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { ForgotPasswordModule } from './forgotpassword/forgotpassword.module';
 import { CaseSubmissionModule } from './casesubmission/casesubmission.module';
+import { IdpAuthModule } from './Idp/idp-auth.module';
 
 @Module({
-  imports: [  
+  imports: [ IdpAuthModule,
     ConfigModule.forRoot({
       isGlobal: true,  // Makes the config global so it's accessible everywhere
     }),

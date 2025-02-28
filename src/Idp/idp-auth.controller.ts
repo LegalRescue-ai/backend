@@ -167,7 +167,7 @@ export class IdpAuthController {
         throw new Error('APP_URL is not configured');
       }
 
-      const redirectUri = `${appUrl}/api/v1/auth/${provider}/callback`;
+      const redirectUri = `http://localhost:3000/auth/${provider}/callback`;
 
       const params = new URLSearchParams({
         client_id: providerConfig.clientId,
@@ -216,7 +216,7 @@ export class IdpAuthController {
       }
 
       const providerConfig = this.idpConfigService.getProviderConfig(provider);
-      const redirectUri = `${this.configService.get<string>('APP_URL')}/api/v1/auth/${provider}/callback`;
+      const redirectUri = `${this.configService.get<string>('APP_URL')}/auth/${provider}/callback`;
 
       // Get tokens from IDP
       const tokens = await this.getIdpTokens(
@@ -322,7 +322,7 @@ export class IdpAuthController {
 
   private getAppleUserInfo(tokens: TokenResponse): UserInfo {
     try {
-      const decodedToken = jwt.decode(tokens.id_token);
+      const decodedToken = jwt.decode(tokens.id_token); 
       if (!decodedToken || typeof decodedToken === 'string') {
         throw new Error('Invalid ID token format from Apple');
       }
@@ -489,3 +489,4 @@ export class IdpAuthController {
     );
   }
 }
+

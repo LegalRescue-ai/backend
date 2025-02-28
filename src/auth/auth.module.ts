@@ -6,11 +6,13 @@ import { AuthService } from "./auth.service";
 import { PassportModule } from "@nestjs/passport";
 import { JwtModule } from "@nestjs/jwt";
 import { ConfigModule } from "@nestjs/config";
+import { SupabaseModule } from "src/casesubmission/supabase.module";
 
 @Module({
   controllers: [AuthController],
   imports: [
     CognitoModule,
+    SupabaseModule,
     PassportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET, // Ensure your secret key is stored in environment variables
