@@ -310,8 +310,19 @@ async changePassword(
 @Post('/logout')
 @HttpCode(HttpStatus.OK)
 async logout(@Res({passthrough: true}) response:Response){
-  response.clearCookie('idToken', {path: '/'});
-  response.clearCookie('refreshToken', {path: '/'});;
+  response.clearCookie('idToken', { 
+    path: '/',          
+    secure: true,      
+    sameSite: 'none',   
+    httpOnly: true      
+  });
+  
+  response.clearCookie('refreshToken', { 
+    path: '/',          
+    secure: true,      
+    sameSite: 'none',   
+    httpOnly: true      
+  });
 
   return {success:true}
 }
