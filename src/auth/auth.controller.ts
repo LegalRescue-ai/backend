@@ -212,45 +212,6 @@ async updateUser(
   }
 }
 
-@Post('upload-profile-picture')
-@UseInterceptors(
-  FileInterceptor('file', {
-    storage: multer.diskStorage({
-      destination: (req, file, cb) => {
-        cb(null, './uploads/temp');
-      },
-      filename: (req, file, cb) => {
-        const cognitoId = req.body.cognito_id; // Use cognito_id passed in the request body
-        const filename = `${cognitoId}-${Date.now()}-${file.originalname}`;
-        cb(null, filename);
-      },
-    }),
-  }),
-)
-async uploadProfilePicture(
-  @UploadedFile() file: Express.Multer.File,
-  @Body() body: { cognito_id: string }, // Ensure this is 'cognito_id' not 'cognitoId'
-) {
-  if (!file) {
-    throw new BadRequestException('No file uploaded');
-  }
-
-  if (!body.cognito_id) {
-    throw new BadRequestException('Cognito ID is required');
-  }
-
-  try {
-    const filePath = `uploads/temp/${file.filename}`;
-    const updatedUser = await this.authService.updateProfilePicture(body.cognito_id, filePath); // Use cognito_id
-    return {
-      message: 'Profile picture uploaded successfully',
-      filePath,
-      user: updatedUser,
-    };
-  } catch (error) {
-    throw new BadRequestException('Error processing file');
-  }
-}
 
 
 }

@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { BadRequestException, HttpException, HttpStatus, Injectable, InternalServerErrorException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, HttpException, HttpStatus, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { CognitoService } from "../cognito/cognito.service";
 import { CreateAuthDto } from "../auth/dto/create-auth.dto";
 import { UpdateUserProfileDto } from "./dto/update-auth.dto";
@@ -13,7 +13,8 @@ export class AuthService{
   authService: any;
   userRepository: any;
   supabaseService: any;
-    constructor(private readonly cognitoService: CognitoService){}
+  private readonly bucketName = 'profile-pictures' 
+    constructor(private readonly cognitoService: CognitoService, ){}
 
     async registerUser(registerUserDto: CreateAuthDto): Promise<{ success: boolean; message?: string }> {
       try {
@@ -39,32 +40,11 @@ export class AuthService{
           HttpStatus.UNAUTHORIZED,
         );
       }
-    }
+  }
 
-    async updateProfilePicture(cognito_id: string, filePath: string): Promise<any> {
-      if (!this.supabaseService) {
-        throw new InternalServerErrorException('SupabaseService is not initialized');
-      }
-    
-      // Use cognito_id to fetch the user
-      const user = await this.supabaseService.getUserByCognitoId(cognito_id);
-    
-      if (!user) {
-        throw new InternalServerErrorException('User not found');
-      }
-    
-      try {
-        // Logic for updating the profile picture in your database or storage service
-        user.profilePicture = filePath;
-    
-        // Update user record
-        await this.supabaseService.updateUser(user);
-    
-        return user;
-      } catch (error) {
-        throw new InternalServerErrorException('Error updating profile picture');
-      }
-    }    
+  
+
+
   }
 function someCognitoSignUpFunction(registerUserDto: CreateAuthDto) {
   throw new Error("Function not implemented.");

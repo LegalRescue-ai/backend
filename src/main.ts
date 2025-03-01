@@ -5,7 +5,8 @@ import { ValidationPipe } from '@nestjs/common';
 import * as dotenv from 'dotenv';
 import * as cookieParser from 'cookie-parser'; // ✅ Import cookie-parser
 import { NestExpressApplication } from '@nestjs/platform-express';
-import * as path from 'path';
+import * as path from 'path'; 
+import * as session from 'express-session';
 
 dotenv.config();
 
@@ -19,6 +20,19 @@ async function bootstrap() {
   app.useStaticAssets(path.join(__dirname, '..', 'uploads'), {
     prefix: '/uploads', // Now files are served from /uploads/filename
   });
+
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET,
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        secure: true,
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000,
+      },
+    }),
+  );
 
   // ✅ Enable CORS
   app.enableCors({
@@ -42,7 +56,7 @@ async function bootstrap() {
     }),
   );
 
-  const PORT = process.env.PORT ?? 3002;
+  const PORT = process.env.PORT ?? 3001;
   await app.listen(PORT);
   console.log(`🚀 Server is running on port ${PORT}`);
 }
