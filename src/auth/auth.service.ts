@@ -26,12 +26,10 @@ export class AuthService{
 
     async loginUser(loginUserDto: LoginUserDto) {
       try {
-        console.log('AuthService - loginUser:', loginUserDto);
   
         const { username, password } = loginUserDto;
         const response = await this.cognitoService.loginUser(username, password);
   
-        console.log('AuthService - Login successful:', response);
         return response;
       } catch (error) {
         console.error('AuthService - Login error:', error);

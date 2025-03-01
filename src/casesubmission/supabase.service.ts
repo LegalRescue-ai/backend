@@ -19,7 +19,6 @@ export class SupabaseService {
     }
 
     this.supabase = createClient(supabaseUrl, supabaseKey);
-    console.log("✅ SupabaseService initialized successfully.");
   }
 
   async getUserByCognitoId(cognitoId: string): Promise<any> {

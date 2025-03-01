@@ -46,31 +46,12 @@ export class AuthController {
   async register(@Body() registerUserDto: CreateAuthDto) {
     try {
       const registerResponse = await this.cognitoService.registerUser(registerUserDto);
-
-      if (!registerResponse || !registerResponse.success || !registerResponse.userId) {
-        throw new BadRequestException(registerResponse?.message || 'Registration failed');
-      }
-
-      // Fetch user info from Supabase using Cognito ID
-      const userInfo = await this.cognitoService.getUserInfo(registerResponse.userId);
-
-      return {
-        message: 'User registered successfully',
-        user: {
-          firstName: userInfo.firstname,
-          lastName: userInfo.lastname,
-          email: userInfo.email,
-          zipCode: userInfo.zipcode,
-          phoneNumber: userInfo.phonenumber,
-        },
-      };
     } catch (error) {
-      console.error('Registration Error:', error);
       throw new InternalServerErrorException(error.message || 'An unexpected error occurred');
     }
   }
 
-  @Post('/confirmSignUp') 
+  @Post('/confirmSignUp')  
   async confirmSignUp(
     @Body('email') email: string,
     @Body('confirmationCode') confirmationCode: string
@@ -85,14 +66,11 @@ export class AuthController {
   @Post('/login')
   async signin(@Body() loginUserDto: LoginUserDto) {
     try {
-      console.log('Login request received:', loginUserDto);
 
       const response = await this.authService.loginUser(loginUserDto);
-      console.log('Login successful:', response);
 
       return response;
     } catch (error) {
-      console.error('Login failed:', error);
 
       throw new HttpException(
         error.message || 'Internal Server Error',
@@ -114,7 +92,6 @@ export class AuthController {
         message: response.message,
       };
     } catch (error) {
-      console.error('Error in /resend-confirmation-code:', error.message);
 
       if (error instanceof NotFoundException) {
         throw new NotFoundException(error.message);
@@ -134,7 +111,6 @@ export class AuthController {
   @Get("user-count")
   async getTotalRegisteredUsers() {
     try {
-      console.log("🔍 Fetching total user count from Cognito...");
   
       const totalUsers = await this.cognitoService.getTotalUsers();
   
@@ -142,14 +118,12 @@ export class AuthController {
         throw new InternalServerErrorException("Failed to retrieve user count.");
       }
   
-      console.log("✅ Total users retrieved:", totalUsers);
       
       return {
         message: "Total number of registered users",
         data: totalUsers,
       };
     } catch (error) {
-      console.error("❌ Error retrieving user count:", error);
       throw new InternalServerErrorException("Error retrieving user count");
     }
   }
@@ -161,17 +135,14 @@ export class AuthController {
       throw new BadRequestException("Either email or user ID is required.");
     }
   
-    // 🔹 Log the incoming query params for debugging
-    console.log(`Received request for user with email: "${email}", id: ${id}`);
+
   
     try {
-      const supabase = this.supabaseService.getClient();
-      console.log("✅ Supabase client retrieved successfully.");
+      const supabase = this.supabaseService.getClient();;
   
       // 🔹 Clean email (remove any spaces or leading/trailing characters)
       if (email) {
         email = email.trim();
-        console.log(`🔹 Filtering by email: "${email}"`);
       }
   
       // 🔹 Build the query based on the presence of email or ID
@@ -187,32 +158,26 @@ export class AuthController {
       const { data, error } = await query.limit(1); // Limit to 1 row, without calling .single()
   
       // 🔹 Log the full query execution details
-      console.log("🔹 Supabase query executed:", query.toString());
   
       // 🔹 Handle query errors
       if (error) {
-        console.error("❌ Supabase query error:", error);
         throw new InternalServerErrorException("Database query failed. Please try again later.");
       }
   
       // 🔹 Handle case when no user is found
       if (!data || data.length === 0) {
-        console.log(`🔹 No user found with ${email ? "email: " + email : "ID: " + id}`);
         throw new NotFoundException(`No user found with ${email ? "email: " + email : "ID: " + id}`);
       }
   
       // 🔹 Handle case when more than one user is found (data integrity issue)
       if (data.length > 1) {
-        console.log("❌ Multiple users found with the same email or ID. Data integrity issue.");
         throw new InternalServerErrorException("Multiple users found with the same criteria. Please check data integrity.");
       }
   
       // 🔹 Return the first user if exactly one user is found
-      console.log("✅ User found:", data[0]);
       return data[0];
     } catch (error) {
       // 🔹 Log detailed error for debugging
-      console.error("❌ Error fetching user:", error);
   
       // 🔹 Throw specific errors
       if (error instanceof NotFoundException) {
@@ -232,21 +197,17 @@ async updateUser(
 ) {
   // Get identifier from query parameters or from the authenticated user
   const identifier = email || req.user?.email;  // Now only using email
-  console.log("Identifier:", identifier);  // Log identifier
   
   // If no identifier found, throw BadRequestException
   if (!identifier) {
-    console.error("❌ No identifier found (email).");
     throw new BadRequestException("Email is required.");
   }
 
   try {
     // Attempt to update user profile using the identifier
-    console.log("🔄 Updating user profile with identifier:", identifier);
     return await this.cognitoService.updateUserProfile(identifier, updateUserDto);
   } catch (error) {
     // Log the complete error and throw a generic internal server error
-    console.error("❌ Error updating user profile:", error.message || error);
     throw new InternalServerErrorException("Error updating user information");
   }
 }
@@ -287,7 +248,6 @@ async uploadProfilePicture(
       user: updatedUser,
     };
   } catch (error) {
-    console.error('Error during file upload:', error);
     throw new BadRequestException('Error processing file');
   }
 }
