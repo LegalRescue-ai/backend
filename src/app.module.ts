@@ -2,8 +2,6 @@
 // app.module.ts
 import { Module } from '@nestjs/common';
 import { WaitlistModule } from './waitlist/waitlist.module'; 
-import { MailerModule } from './mailer/mailer.module';
-import { RecaptchaModule } from './recaptcha/recaptcha.module';
 import { DiscountService } from './discount/discount.service';
 import { AttorneyAuthModule } from './attorney-auth/attorney-auth.module';
 import { ConfigModule } from "@nestjs/config";
@@ -17,7 +15,7 @@ import { IdpAuthModule } from './Idp/idp-auth.module';
 import { CaseManagementModule } from './case-management/case-management.module';
 
 @Module({
-  imports: [WaitlistModule, IdpAuthModule,  MailerModule,CaseManagementModule , DiscountModule, RecaptchaModule, AttorneyAuthModule,
+  imports: [WaitlistModule, IdpAuthModule,  CaseManagementModule , DiscountModule,  AttorneyAuthModule,
     ConfigModule.forRoot({
       isGlobal: true
     }),
