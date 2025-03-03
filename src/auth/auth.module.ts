@@ -1,25 +1,14 @@
 /* eslint-disable prettier/prettier */
-import { Module } from "@nestjs/common";
-import { AuthController } from "./auth.controller";
-import { CognitoModule } from "../cognito/cognito.module";
-import { AuthService } from "./auth.service";
-import { PassportModule } from "@nestjs/passport";
-import { JwtModule } from "@nestjs/jwt";
-import { ConfigModule } from "@nestjs/config";
-import { SupabaseModule } from "src/casesubmission/supabase.module";
+import { Module } from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { AuthController } from './auth.controller';
+import { CognitoModule } from '../cognito/cognito.module'; // ✅ Import CognitoModule
+import { SupabaseModule } from '../casesubmission/supabase.module'; 
+import { S3Client } from '@aws-sdk/client-s3';
 
 @Module({
+  imports: [CognitoModule, SupabaseModule], // ✅ Import CognitoModule instead of manually providing CognitoService
   controllers: [AuthController],
-  imports: [
-    CognitoModule,
-    SupabaseModule,
-    PassportModule,
-    JwtModule.register({
-      secret: process.env.JWT_SECRET, // Ensure your secret key is stored in environment variables
-      signOptions: { expiresIn: "1h" }, // Token expiration time
-    }),
-    ConfigModule, // Include ConfigModule to load environment variables
-  ],
-  providers: [AuthService], // Provide the JwtStrategy here
+  providers: [AuthService, S3Client], // ✅ Remove CognitoService from providers
 })
 export class AuthModule {}

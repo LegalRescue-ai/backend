@@ -11,23 +11,15 @@ export class CreateAuthDto {
 
     @IsString()
     @IsNotEmpty()
-    fullname: string;
+    firstname: string;
+
+    @IsString()
+    @IsNotEmpty()
+    lastname: string;
 
     @IsString()
     @Matches(/^\+?[1-9]\d{1,14}$/, { message: 'Invalid phone number format' })
     phonenumber: string;
-
-    @IsString()
-    @IsNotEmpty()
-    address: string;
-
-    @IsString()
-    @IsNotEmpty()
-    state: string;
-
-    @IsString()
-    @IsNotEmpty()
-    county: string;
 
     @IsString()
     zipcode: string; 

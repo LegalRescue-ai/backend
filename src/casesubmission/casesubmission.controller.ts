@@ -7,33 +7,32 @@ import { CreateCaseDto } from './dto/createcase.dto';
 export class CaseSubmissionController {
   constructor(private readonly caseSubmissionService: CaseSubmissionService) {}
 
-  @Post('new') 
-  async createCase(@Body() createCaseDto: CreateCaseDto, @Request() req) {
+  @Post('new')
+  async createCase(@Body() createCaseDto: CreateCaseDto) {
     try {
-      if (!req.user || !req.user.userId) {
-        throw new UnauthorizedException('Invalid or missing user authentication.');
-      }
-
-      const userId = req.user.userId;  // Extracted from JWT payload
-      const createdCase = await this.caseSubmissionService.createCaseSubmission(createCaseDto, userId);
+      // Call service method without user authentication
+      const createdCase = await this.caseSubmissionService.createCaseSubmission(createCaseDto);
 
       if (!createdCase) {
         throw new InternalServerErrorException('Failed to create case submission.');
       }
 
-      return {
+      return { 
         message: 'Case submission created successfully!',
         data: createdCase,
       };
     } catch (error) {
+      console.error('❌ Error in createCase:', error); // Log error
       throw new InternalServerErrorException(`Error creating case submission: ${error.message}`);
     }
   }
 
-  @Get()
+
+  @Get("cases")
   async getAllCases() {
     try {
       const cases = await this.caseSubmissionService.getAllCaseSubmissions();
+
       if (!cases || cases.length === 0) {
         throw new NotFoundException('No cases found.');
       }
@@ -43,7 +42,12 @@ export class CaseSubmissionController {
         data: cases,
       };
     } catch (error) {
-      throw new InternalServerErrorException(`Error retrieving cases: ${error.message}`);
+      // Correctly handle NotFoundException separately
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      throw new Error(`Error retrieving cases: ${error.message}`);
     }
   }
 
