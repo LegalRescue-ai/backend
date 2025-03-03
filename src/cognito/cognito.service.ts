@@ -1,8 +1,10 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { Injectable, InternalServerErrorException, Inject, BadRequestException, ConflictException, NotFoundException, UnauthorizedException, Query } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Inject, BadRequestException, ConflictException, NotFoundException, UnauthorizedException, Query, Logger } from '@nestjs/common';
 import {
+  AdminGetUserCommand,
   AdminUpdateUserAttributesCommand,
+  ChangePasswordCommand,
   CognitoIdentityProviderClient,
   ConfirmSignUpCommand,
   InitiateAuthCommand,
@@ -22,6 +24,7 @@ import { Response } from 'express';
 @Injectable()
 export class CognitoService {
   private readonly cognitoClient: CognitoIdentityProviderClient;
+  private readonly logger = new Logger(CognitoService.name);
   private readonly supabase: SupabaseClient;
   supabaseClient: any;
   cognito: any;
@@ -59,47 +62,65 @@ export class CognitoService {
     this.supabase = createClient(this.supabaseConfig.url, this.supabaseConfig.key);
   
   }
-
   async registerUser(userDetails: {
     email: string;
     password: string;
-    fullname: string;
-    address: string;
-    state: string;
-    county: string;
+    firstname: string;
+    lastname: string;
     zipcode: string;
     phonenumber: string;
-  }): Promise<any> {
+    address?: string;
+    state?: string;
+    county?: string;
+  }): Promise<any | null> {
     if (!this.supabase) {
-      throw new InternalServerErrorException('Supabase client is not initialized.');
+      console.error('Supabase client is not initialized.');
+      return null;
     }
   
     const username = userDetails.email;
     const secretHash = this.computeSecretHash(username);
+    const fullname = `${userDetails.firstname} ${userDetails.lastname}`.trim();
+  
+    // Ensure phone number is in E.164 format (+1XXXXXXXXXX)
+    const formattedPhoneNumber = userDetails.phonenumber.startsWith('+')
+      ? userDetails.phonenumber
+      : `+${userDetails.phonenumber}`;
   
     try {
+      // Construct the UserAttributes array dynamically
+      const userAttributes = [
+        { Name: 'email', Value: userDetails.email },
+        { Name: 'phone_number', Value: formattedPhoneNumber },
+        { Name: 'name', Value: fullname },
+      ];
+      
+      if (userDetails.address) {
+        userAttributes.push({ Name: 'address', Value: userDetails.address });
+      } else {
+        userAttributes.push({ Name: 'address', Value: 'N/A' }); // Default value
+      }      
+  
+      // Only add custom attributes if provided
+      if (userDetails.zipcode) {
+        userAttributes.push({ Name: 'custom:zipcode', Value: userDetails.zipcode });
+      }
+  
       // Sign up user in Cognito
       const signUpCommand = new SignUpCommand({
         ClientId: this.config.clientId,
         Username: username,
         Password: userDetails.password,
         SecretHash: secretHash,
-        UserAttributes: [
-          { Name: 'email', Value: userDetails.email },
-          { Name: 'phone_number', Value: userDetails.phonenumber },
-          { Name: 'name', Value: userDetails.fullname },
-          { Name: 'address', Value: userDetails.address },
-          { Name: 'custom:zipcode', Value: userDetails.zipcode },
-          { Name: 'custom:county', Value: userDetails.county },
-          { Name: 'custom:state', Value: userDetails.state },
-        ],
+        UserAttributes: userAttributes,
       });
   
       const response = await this.cognitoClient.send(signUpCommand);
       const userId = response?.UserSub;
   
       if (!userId) {
-        throw new Error('Failed to retrieve user ID from Cognito.');
+        console.error('Failed to retrieve user ID from Cognito.');
+        return null;
       }
   
       // Insert user into Supabase
@@ -107,81 +128,105 @@ export class CognitoService {
         .from('users')
         .insert({
           cognito_id: userId,
-          firstname: userDetails.fullname.split(' ')[0],
-          lastname: userDetails.fullname.split(' ').slice(1).join(' '),
+          firstname: userDetails.firstname,
+          lastname: userDetails.lastname,
           email: userDetails.email,
-          address: userDetails.address,
-          state: userDetails.state,
-          county: userDetails.county,
-          zipcode: userDetails.zipcode,
-          phonenumber: userDetails.phonenumber,
+          address: userDetails.address || null,
+          state: userDetails.state || null,
+          county: userDetails.county || null,
+          zipcode: userDetails.zipcode || null,
+          phonenumber: formattedPhoneNumber,
         });
   
       if (error) {
-        throw new InternalServerErrorException('Failed to save user in database.');
+        console.error('Failed to save user in database:', error.message);
+        return null;
       }
   
-
       return { success: true, userId };
     } catch (error) {
-      throw new InternalServerErrorException(error.message || 'Registration failed.');
+      console.error('Registration error:', error);
+      return null;
     }
   }
   
+  
   async loginUser(username: string, password: string): Promise<any> {
     try {
-      // Initialize Cognito client (if not already done in constructor)
+      // Initialize Cognito client
       const cognitoClient = new CognitoIdentityProviderClient({
-        region: this.config.awsRegion // Ensure the correct AWS region is used
+        region: this.config.awsRegion,
       });
   
-      // Prepare the authentication command
+      // Step 1: Retrieve user details from Cognito
+      let cognitoUser;
+      try {
+        const userResponse = await cognitoClient.send(
+          new AdminGetUserCommand({
+            UserPoolId: this.config.userPoolId,
+            Username: username,
+          })
+        );
+  
+        // Extract email from Cognito user attributes
+        const emailAttr = userResponse.UserAttributes?.find(attr => attr.Name === 'email');
+        const emailFromCognito = emailAttr?.Value;
+  
+        if (!emailFromCognito || emailFromCognito !== username) {
+          throw new UnauthorizedException('Invalid email or user does not exist.');
+        }
+  
+        cognitoUser = userResponse;
+      } catch (error) {
+        if ((error as any).name === 'UserNotFoundException') {
+          throw new UnauthorizedException('User not found in Cognito.');
+        }
+        throw new InternalServerErrorException('Error verifying user existence.');
+      }
+  
+      // Step 2: Proceed with authentication only if the email exists
       const authCommand = new InitiateAuthCommand({
         AuthFlow: 'USER_PASSWORD_AUTH',
         ClientId: this.config.clientId,
         AuthParameters: {
           USERNAME: username,
           PASSWORD: password,
-          SECRET_HASH: this.computeSecretHash(username), // Ensure this is implemented correctly
+          SECRET_HASH: this.computeSecretHash(username),
         },
       });
   
-      // Send the authentication command
+      // Send authentication request
       const response = await cognitoClient.send(authCommand);
   
-      // Handle unsuccessful authentication
+      // If authentication fails
       if (!response.AuthenticationResult) {
-        throw new UnauthorizedException('Authentication failed');
+        throw new UnauthorizedException('Authentication failed.');
       }
   
-      // Extract IdToken from the response
+      // Extract ID Token
       const { IdToken } = response.AuthenticationResult;
-  
-      // Decode ID Token to get user information
       const decodedToken = jwt.decode(IdToken) as any;
-      const cognitoId = decodedToken?.sub; // Extract the Cognito user ID (sub)
+      const cognitoId = decodedToken?.sub;
   
       if (!cognitoId) {
         throw new InternalServerErrorException('Failed to retrieve Cognito ID.');
       }
   
-      // Fetch user info from your Supabase service (ensure getUserInfo is defined and works)
+      // Fetch user details from Supabase
       const userInfo = await this.getUserInfo(cognitoId);
   
       return {
-        idToken: IdToken, // Return the ID token
-        user: userInfo,   // Return the user data from Supabase
+        idToken: IdToken,
+        user: userInfo,
       };
-    } catch (error) {;
-      // If it's an AWS SDK error, handle it accordingly
+    } catch (error) {
       if (error instanceof Error) {
         return this.handleCognitoError(error);
       }
-  
-      // If it’s another type of error, throw a generic internal server error
       throw new InternalServerErrorException('An error occurred during login.');
     }
   }
+  
   
   // Example of error handling
   handleCognitoError(error: Error): InternalServerErrorException {
@@ -415,5 +460,20 @@ export class CognitoService {
       throw new InternalServerErrorException("Failed to update user profile");
     }
   }
-  
+
+  async changeUserPassword(accessToken: string, currentPassword: string, newPassword: string) {
+    try {
+      const command = new ChangePasswordCommand({
+        AccessToken: accessToken,
+        PreviousPassword: currentPassword,
+        ProposedPassword: newPassword,
+      });
+
+      const response = await this.cognitoClient.send(command);
+      return response;
+    } catch (error) {
+      this.logger.error(`Cognito password change failed: ${error.message}`);
+      throw new InternalServerErrorException("Password change failed");
+    }
+  }
 }

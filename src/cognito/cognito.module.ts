@@ -3,17 +3,17 @@ import { Module } from '@nestjs/common';
 import { CognitoService } from './cognito.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SupabaseModule } from 'src/casesubmission/supabase.module';
-
+ 
 @Module({
-  imports: [ConfigModule,SupabaseModule], // Import ConfigModule
+  imports: [ConfigModule, SupabaseModule], // Import ConfigModule & SupabaseModule
   providers: [
     {
       provide: 'COGNITO_CONFIG',
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        userPoolId: configService.get<string>('COGNITO_USER_POOL_ID'),
-        clientId: configService.get<string>('COGNITO_CLIENT_ID'),
-        clientSecret: configService.get<string>('COGNITO_CLIENT_SECRET'),
+        userPoolId: configService.get<string>('T_COGNITO_USER_POOL_ID'),
+        clientId: configService.get<string>('T_COGNITO_CLIENT_ID'),
+        clientSecret: configService.get<string>('T_COGNITO_CLIENT_SECRET'),
         awsRegion: configService.get<string>('REGION'),
       }),
     },
@@ -27,6 +27,6 @@ import { SupabaseModule } from 'src/casesubmission/supabase.module';
     },
     CognitoService,
   ],
-  exports: [CognitoService],
+  exports: [CognitoService, 'COGNITO_CONFIG', 'SUPABASE_CONFIG'], // Export both
 })
 export class CognitoModule {}

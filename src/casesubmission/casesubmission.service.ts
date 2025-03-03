@@ -5,26 +5,35 @@ import { SupabaseService } from './supabase.service';
 
 @Injectable()
 export class CaseSubmissionService {
+  [x: string]: any;
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  // Modify the method to accept userId as an argument
-  async createCaseSubmission(createCaseDto: CreateCaseDto, userId: string) {
+  async createCaseSubmission(createCaseDto: CreateCaseDto, cognitoId?: string) {
     try {
-      // Pass the userId to the Supabase service method
-      return await this.supabaseService.createSubmission(createCaseDto, userId);
+      // Pass data without requiring Cognito ID
+      return await this.supabaseService.createSubmission(createCaseDto, cognitoId);
     } catch (error) {
-      throw new InternalServerErrorException(`Error in CaseSubmissionService: ${error.message}`);
+      console.error('❌ Error in createCaseSubmission:', error); // Log error
+      throw new InternalServerErrorException(`Case submission failed: ${error.message}`);
     }
   }
 
   async getAllCaseSubmissions() {
     try {
-      return await this.supabaseService.getAllSubmissions();
+      const supabase = this.supabaseService.getClient();
+      const { data, error } = await supabase
+        .from('case_submissions') // Ensure this table exists
+        .select('*');
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return data;
     } catch (error) {
-      throw new InternalServerErrorException(`Error in CaseSubmissionService: ${error.message}`);
+      throw new Error(`Supabase query failed: ${error.message}`);
     }
   }
-
 
   async getCasesByUserId(userId: string) {
     try {
