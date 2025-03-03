@@ -81,6 +81,7 @@ export class CognitoService {
     return hmac.digest('base64');
   }
 
+  // Attorney User Methods
   async registerAttorneyUser(userDetails: {
     email: string;
     password: string;
@@ -112,7 +113,7 @@ export class CognitoService {
       const response = await this.cognitoClient.send(command);
       return response;
     } catch (error) {
-      console.error('Failed to register user:', error);
+      console.error('Failed to register attorney:', error);
 
       if (error.__type === 'UsernameExistsException') {
         throw new ConflictException(
@@ -136,6 +137,7 @@ export class CognitoService {
       }
     }
   }
+
   async confirmAttorneySignUp(email: string, code: string): Promise<any> {
     const secretHash = this.computeSecretHash(email);
 
@@ -155,7 +157,7 @@ export class CognitoService {
         response: response,
       };
     } catch (error) {
-      console.error('Error confirming user signup:', error);
+      console.error('Error confirming attorney signup:', error);
 
       switch (error.__type) {
         case 'CodeMismatchException':
@@ -199,13 +201,12 @@ export class CognitoService {
       };
     } catch (error) {
       console.error('Error resending confirmation code:', error);
-
+      
       switch (error.__type) {
         case 'UserNotFoundException':
           throw new NotFoundException('No account found with this email.');
         case 'InvalidParameterException':
           throw new BadRequestException('Invalid email address.');
-
         case 'NotAuthorizedException':
           throw new UnauthorizedException('Account has already been verified.');
         default:
@@ -237,8 +238,8 @@ export class CognitoService {
         ...response.AuthenticationResult,
       };
     } catch (error) {
-      console.error('Failed to log in user:', error);
-
+      console.error('Failed to log in attorney:', error);
+      
       switch (error.__type) {
         case 'NotAuthorizedException':
           throw new UnauthorizedException('Incorrect username or password.');
@@ -266,170 +267,100 @@ export class CognitoService {
     }
   }
 
-  async updateAttorneyUser(
-    accessToken: string,
-    updatedUserAttributes: UpdateUserProfileDto,
-  ): Promise<any> {
-    const userAttributes = Object.entries(updatedUserAttributes)
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      .filter(([_, value]) => value !== undefined)
-      .map(([Name, Value]) => ({ Name, Value }));
+  // Regular User Methods
+  async registerUser(userDetails: {
+    email: string;
+    password: string;
+    fullname: string;
+    address: string;
+    state: string;
+    county: string;
+    zipcode: string;
+    phonenumber: string;
+  }): Promise<any> {
+    const { email, password, fullname, phonenumber, zipcode, county, state, address } = userDetails;
+    const username = email;
+    const secretHash = this.computeSecretHash(username);
 
-    const command = new UpdateUserAttributesCommand({
-      AccessToken: accessToken,
+    const userAttributes = [
+      { Name: 'email', Value: email },
+      { Name: 'phone_number', Value: phonenumber },
+      { Name: 'name', Value: fullname },
+      { Name: 'address', Value: address },
+      { Name: 'custom:zipcode', Value: zipcode },
+      { Name: 'custom:county', Value: county },
+      { Name: 'custom:state', Value: state },
+    ];
+
+    const command = new SignUpCommand({
+      ClientId: this.config.clientId,
+      Username: username,
+      Password: password,
       UserAttributes: userAttributes,
+      SecretHash: secretHash,
     });
 
     try {
       const response = await this.cognitoClient.send(command);
-      console.log('User profile updated successfully:', response);
-      return response;
+      console.log('User registered successfully:', { username, response });
+      return { ...response, username };
     } catch (error) {
-      console.error('Failed to update user profile:', error);
-      throw new Error(`Update failed: ${error.message || error}`);
-    }
-  }
-}
+      console.error('Failed to register user:', error);
 
+      if (error.__type === 'UsernameExistsException') {
+        throw new ConflictException(
+          'An account with this email already exists. Please try logging in instead.',
+        );
+      }
 
-
-
-
-export interface UpdateUserProfileDto {
-  phone_number?: string;
-  name?: string;
-  email?: string;
-}
-
-@Injectable()
-export class CognitoService {
-  private readonly cognitoClient: CognitoIdentityProviderClient;
-
-  constructor(
-    @Inject('COGNITO_CONFIG')
-    private readonly config: {
-      userPoolId: string;
-      clientId: string;
-      clientSecret: string;
-      awsRegion: string;
-    }
-  ) {
-    const { userPoolId, clientId, clientSecret, awsRegion } = config;
-
-
-    if (!clientId || !userPoolId || !awsRegion || !clientSecret) {
-      throw new Error(
-        `Missing required environment variables:
-        - COGNITO_CLIENT_ID: ${clientId || 'Not Set'}
-        - COGNITO_USER_POOL_ID: ${userPoolId || 'Not Set'}
-        - AWS_REGION: ${awsRegion || 'Not Set'}
-        - COGNITO_CLIENT_SECRET: ${clientSecret || 'Not Set'}`
-      );
-    }
-
-    this.cognitoClient = new CognitoIdentityProviderClient({ region: awsRegion });
-  }
-
-  private computeSecretHash(username: string): string {
-    const hmac = crypto.createHmac('sha256', this.config.clientSecret);
-    hmac.update(username + this.config.clientId);
-    return hmac.digest('base64');
-  }
-  
-    async registerUser(userDetails: {
-      email: string;
-      password: string;
-      fullname: string;
-      address: string;
-      state: string;
-      county: string;
-      zipcode: string;
-      phonenumber: string;
-    }): Promise<any> {
-      const { email, password, fullname, phonenumber, zipcode, county, state, address } = userDetails;
-  
-      const username = email;
-      const secretHash = this.computeSecretHash(username);
-  
-      const userAttributes = [
-        { Name: 'email', Value: email },
-        { Name: 'phone_number', Value: phonenumber },
-        { Name: 'name', Value: fullname },
-        { Name: 'address', Value: address }, // Treating address as a standard attribute
-        { Name: 'custom:zipcode', Value: zipcode },
-        { Name: 'custom:county', Value: county },
-        { Name: 'custom:state', Value: state },
-      ];
-  
-      const command = new SignUpCommand({
-        ClientId: this.config.clientId,
-        Username: username,
-        Password: password,
-        UserAttributes: userAttributes,
-        SecretHash: secretHash,
-      });
-  
-      try {
-        const response = await this.cognitoClient.send(command);
-        console.log('User registered successfully:', { username, response });
-        return { ...response, username };
-      } catch (error) {
-        console.error('Failed to register user:', error);
-  
-        if (error.__type === 'UsernameExistsException') {
-          throw new ConflictException('An account with this email already exists. Please try logging in instead.');
-        }
-  
-        // Handle other potential Cognito errors
-        switch (error.__type) {
-          case 'InvalidPasswordException':
-            throw new BadRequestException('Password does not meet requirements.');
-          case 'InvalidParameterException':
-            throw new BadRequestException('Invalid parameters provided.');
-          case 'CodeDeliveryFailureException':
-            throw new ServiceUnavailableException('Unable to send verification code.');
-          default:
-            throw new InternalServerErrorException('Registration failed. Please try again later.');
-        }
+      switch (error.__type) {
+        case 'InvalidPasswordException':
+          throw new BadRequestException('Password does not meet requirements.');
+        case 'InvalidParameterException':
+          throw new BadRequestException('Invalid parameters provided.');
+        case 'CodeDeliveryFailureException':
+          throw new ServiceUnavailableException('Unable to send verification code.');
+        default:
+          throw new InternalServerErrorException('Registration failed. Please try again later.');
       }
     }
+  }
 
-    async confirmSignUp(email: string, confirmationCode: string): Promise<any> {
-      const secretHash = this.computeSecretHash(email);
-    
-      const command = new ConfirmSignUpCommand({
-        ClientId: this.config.clientId,
-        Username: email,
-        ConfirmationCode: confirmationCode,
-        SecretHash: secretHash,
-      });
-    
-      try {
-        const response = await this.cognitoClient.send(command);
-        return {
-          success: true,
-          message: 'Email verification successful.',
-          redirectToLogin: true,
-          response,
-        };
-      } catch (error) {
-        console.error('Error confirming signup:', error);
-    
-        switch (error.__type) {
-          case 'CodeMismatchException':
-            throw new BadRequestException('Invalid OTP. Please try again.');
-          case 'ExpiredCodeException':
-            throw new BadRequestException('OTP has expired. Please request a new one.');
-          case 'UserNotFoundException':
-            throw new NotFoundException('User not found. Please register.');
-          case 'NotAuthorizedException':
-            throw new UnauthorizedException('Account already verified.');
-          default:
-            throw new InternalServerErrorException('Could not verify email. Try again later.');
-        }
+  async confirmSignUp(email: string, confirmationCode: string): Promise<any> {
+    const secretHash = this.computeSecretHash(email);
+
+    const command = new ConfirmSignUpCommand({
+      ClientId: this.config.clientId,
+      Username: email,
+      ConfirmationCode: confirmationCode,
+      SecretHash: secretHash,
+    });
+
+    try {
+      const response = await this.cognitoClient.send(command);
+      return {
+        success: true,
+        message: 'Email verification successful.',
+        redirectToLogin: true,
+        response,
+      };
+    } catch (error) {
+      console.error('Error confirming signup:', error);
+
+      switch (error.__type) {
+        case 'CodeMismatchException':
+          throw new BadRequestException('Invalid OTP. Please try again.');
+        case 'ExpiredCodeException':
+          throw new BadRequestException('OTP has expired. Please request a new one.');
+        case 'UserNotFoundException':
+          throw new NotFoundException('User not found. Please register.');
+        case 'NotAuthorizedException':
+          throw new UnauthorizedException('Account already verified.');
+        default:
+          throw new InternalServerErrorException('Could not verify email. Try again later.');
       }
     }
-    
+  }
 
   async resendConfirmationCode(email: string): Promise<any> {
     const secretHash = this.computeSecretHash(email);
@@ -445,7 +376,7 @@ export class CognitoService {
       return {
         success: true,
         message: 'A new verification code has been sent to your email.',
-        response: response
+        response: response,
       };
     } catch (error) {
       console.error('Error resending confirmation code:', error);
@@ -455,11 +386,12 @@ export class CognitoService {
           throw new NotFoundException('No account found with this email.');
         case 'InvalidParameterException':
           throw new BadRequestException('Invalid email address.');
-        
         case 'NotAuthorizedException':
           throw new UnauthorizedException('Account has already been verified.');
         default:
-          throw new InternalServerErrorException('Could not send verification code. Please try again later.');
+          throw new InternalServerErrorException(
+            'Could not send verification code. Please try again later.',
+          );
       }
     }
   }
@@ -471,18 +403,18 @@ export class CognitoService {
       AuthFlow: 'USER_PASSWORD_AUTH',
       ClientId: this.config.clientId,
       AuthParameters: {
-        USERNAME: username, 
+        USERNAME: username,
         PASSWORD: password,
         ...(this.config.clientSecret ? { SECRET_HASH: secretHash } : {}),
       },
     });
- 
+
     try {
       const response = await this.cognitoClient.send(command);
       return {
         success: true,
         message: 'Login successful',
-        ...response.AuthenticationResult
+        ...response.AuthenticationResult,
       };
     } catch (error) {
       console.error('Failed to log in user:', error);
@@ -491,24 +423,31 @@ export class CognitoService {
         case 'NotAuthorizedException':
           throw new UnauthorizedException('Incorrect username or password.');
         case 'UserNotFoundException':
-          throw new NotFoundException('No account found with this email. Please register first.');
+          throw new NotFoundException(
+            'No account found with this email. Please register first.',
+          );
         case 'UserNotConfirmedException':
           await this.resendConfirmationCode(username);
           throw new UnauthorizedException({
-            message: 'Please verify your email before logging in. A new verification code has been sent.',
+            message:
+              'Please verify your email before logging in. A new verification code has been sent.',
             requiresConfirmation: true,
-            email: username
+            email: username,
           });
         case 'PasswordResetRequiredException':
-          throw new UnauthorizedException('Password reset required. Please check your email.');
+          throw new UnauthorizedException(
+            'Password reset required. Please check your email.',
+          );
         default:
-          throw new InternalServerErrorException('Login failed. Please try again later.');
+          throw new InternalServerErrorException(
+            'Login failed. Please try again later.',
+          );
       }
     }
   }
 
+  // Common Methods
   async updateUser(accessToken: string, updatedUserAttributes: UpdateUserProfileDto): Promise<any> {
- 
     const userAttributes = Object.entries(updatedUserAttributes)
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       .filter(([_, value]) => value !== undefined)

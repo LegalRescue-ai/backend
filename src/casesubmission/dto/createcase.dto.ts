@@ -3,8 +3,8 @@ import { IsArray, IsBoolean, IsDate, IsEnum, IsOptional, IsString } from 'class-
 
 export enum ConflictCheckStatus {
   NOT_STARTED = 'Not Started',
-  PENDING_ATTORNEY_CERTIFICATION = 'Pending Attorney Certification',
   PENDING_CLIENT_APPROVAL = 'Pending Client Approval',
+  PENDING_ATTORNEY_APPROVAl = 'Pending Attorney Approval',
   COMPLETED = 'Completed',
   REJECTED = 'Rejected'
 }
@@ -13,9 +13,9 @@ export enum ConflictCheckStatus {
 
 export enum CaseStatus {
   INTEREST_EXPRESSED = 'Interest Expressed',
-  AWAITING_CLIENT_CONFLICT_CHECK = 'Awaiting Client Enhanced Conflict Check Approval',
-  AWAITING_ATTORNEY_CONFLICT_CHECK = 'Awaiting Your Conflict Check Certification',
-  CONFLICT_CHECK_COMPLETED = 'Interest Expressed & Conflict Check Completed',
+  AWAITING_CLIENT_CONFLICT_CHECK = 'Awaiting Client Conflict Check Approval',
+  AWAITING_ATTORNEY_CONFLICT_CHECK = 'Awaiting Your Conflict Check Approval',
+  CONFLICT_CHECK_COMPLETED = 'Conflict Check Completed',
   TERMS_SENT = 'Range of Terms or Contract sent',
   RETAINED = 'Retained Client',
   NO_LONGER_INTERESTED = 'No Longer Interested'

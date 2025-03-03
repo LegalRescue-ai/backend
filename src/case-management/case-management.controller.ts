@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { Controller, Get, Post, Put, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Put, Body, Param, Query } from '@nestjs/common';
 import { CaseManagementService, FilterOptions } from './case-management.service';
 import { CaseStatus } from 'src/casesubmission/dto/createcase.dto';
 
@@ -13,6 +13,7 @@ export class CaseManagementController {
         @Param('attorneyId') attorneyId: string,
         @Query() filters: FilterOptions
     ) {
+        
         return this.caseManagementService.getAvailableCases(attorneyId, filters);
     }
 
@@ -24,11 +25,12 @@ export class CaseManagementController {
         return this.caseManagementService.getInterestedCases(attorneyId, filters);
     }
 
-    @Post('express-interest/:attorneyId/:caseId')
+    @Get('express-interest/:attorneyId/:caseId')
     async expressInterest(
         @Param('attorneyId') attorneyId: string,
         @Param('caseId') caseId: string,
     ) {
+        
         return this.caseManagementService.expressInterest(attorneyId, caseId);
     }
 
@@ -41,13 +43,13 @@ export class CaseManagementController {
         return this.caseManagementService.updateCaseStatus(attorneyId, caseId, status);
     }
 
-    @Post('conflict-check/:attorneyId/:caseId')
+    @Get('conflict-check/:attorneyId/:caseId')
     async submitConflictCheck(
         @Param('attorneyId') attorneyId: string,
         @Param('caseId') caseId: string,
-        @Body() certificationData: any
+       
     ) {
-        return this.caseManagementService.submitConflictCheck(attorneyId, caseId, certificationData);
+        return this.caseManagementService.submitConflictCheck(attorneyId, caseId, );
     }
 
     @Get('case-details/:attorneyId/:caseId')

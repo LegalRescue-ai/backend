@@ -14,11 +14,10 @@ import { StripeModule } from './stripe/stripe.module';
 import { PaymentModule } from './payment/payment.module';
 import { CognitoModule } from './cognito/cognito.module';
 import { IdpAuthModule } from './Idp/idp-auth.module';
-import { CaseManagementController } from './case-management/case-management.controller';
 import { CaseManagementModule } from './case-management/case-management.module';
 
 @Module({
-  imports: [WaitlistModule, IdpAuthModule, MailerModule, DiscountModule, RecaptchaModule, AttorneyAuthModule,
+  imports: [WaitlistModule, IdpAuthModule,  MailerModule,CaseManagementModule , DiscountModule, RecaptchaModule, AttorneyAuthModule,
     ConfigModule.forRoot({
       isGlobal: true
     }),
