@@ -20,6 +20,7 @@ import {
   ForgotPasswordCommand,
   AdminSetUserPasswordCommand,
   VerifyUserAttributeCommand,
+  AdminGetUserCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import * as crypto from 'crypto';
 
@@ -236,6 +237,7 @@ export class CognitoService {
         ...response.AuthenticationResult,
       };
     } catch (error) {
+
     
       switch (error.__type) {
         case 'NotAuthorizedException':
@@ -358,16 +360,28 @@ export class CognitoService {
       }
     }
   }
+  
   async initiateAttorneyForgotPassword(email: string): Promise<any> {
-    const secretHash = this.computeSecretHash(email);
-
-    const command = new ForgotPasswordCommand({
-      ClientId: this.config.clientId,
-      Username: email,
-      SecretHash: secretHash,
-    });
-
     try {
+      const userStatus = await this.getUserStatus(email);
+      
+      if (!userStatus.isEmailVerified) {
+        await this.resendAttorneyConfirmationCode(email);
+        throw new UnauthorizedException({
+          message: 'Please verify your email before resetting your password. A new verification code has been sent.',
+          requiresConfirmation: true,
+          email: email,
+        });
+      }
+      
+      const secretHash = this.computeSecretHash(email);
+      
+      const command = new ForgotPasswordCommand({
+        ClientId: this.config.clientId,
+        Username: email,
+        SecretHash: secretHash,
+      });
+      
       const response = await this.cognitoClient.send(command);
       return {
         success: true,
@@ -375,8 +389,17 @@ export class CognitoService {
         response: response,
       };
     } catch (error) {
-      console.error('Error initiating password reset:', error);
-
+      console.log('Error in initiateAttorneyForgotPassword:', error);
+      
+    
+      if (error instanceof UnauthorizedException ||
+          error instanceof NotFoundException ||
+          error instanceof BadRequestException ||
+          error instanceof InternalServerErrorException) {
+        throw error; 
+      }
+      
+   
       switch (error.__type) {
         case 'UserNotFoundException':
           throw new NotFoundException('No account found with this email.');
@@ -480,6 +503,35 @@ export class CognitoService {
         default:
           throw new InternalServerErrorException('Failed to change password. Please try again');
       }
+    }
+  }
+
+  async getUserStatus(email: string): Promise<{ isEmailVerified: boolean }> {
+    const command = new AdminGetUserCommand({
+      UserPoolId: this.config.userPoolId,
+      Username: email,
+    });
+  
+    try {
+      const response = await this.cognitoClient.send(command);
+      
+  
+      const emailVerifiedAttribute = response.UserAttributes?.find(
+        attr => attr.Name === 'email_verified'
+      );
+      
+      const isEmailVerified = emailVerifiedAttribute?.Value === 'true';
+      
+      return {
+        isEmailVerified,
+      };
+    } catch (error) {
+      if (error.__type === 'UserNotFoundException') {
+        throw new NotFoundException('No account found with this email.');
+      }
+      throw new InternalServerErrorException(
+        'Could not check user status. Please try again later.',
+      );
     }
   }
 

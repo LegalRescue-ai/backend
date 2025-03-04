@@ -12,6 +12,8 @@ import { PaymentModule } from './payment/payment.module';
 import { CognitoModule } from './cognito/cognito.module';
 import { IdpAuthModule } from './AttorneyIdp/idp-auth.module';
 
+
+
 @Module({
   imports: [ IdpAuthModule, DiscountModule,  AttorneyAuthModule,
     ConfigModule.forRoot({
@@ -20,7 +22,7 @@ import { IdpAuthModule } from './AttorneyIdp/idp-auth.module';
     DiscountModule,
     StripeModule,
     PaymentModule,
-    CognitoModule
+    CognitoModule,
   ],
   providers: [DiscountService, SupabaseService],
   controllers: [DiscountController], 

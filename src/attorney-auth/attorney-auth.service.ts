@@ -45,16 +45,7 @@ export class AttorneyAuthService {
       });
     }
 
-  private parseJsonField(field: string): any {
-    try {
-      return JSON.parse(field);
-    } catch (error) {
-      this.logger.error(`Failed to parse JSON field: ${error.message}`, {
-        field,
-      });
-      return null;
-    }
-  }
+
 
   async signUpAttorney(data: AttorneySignUpDTO) {
     const { email } = data;
