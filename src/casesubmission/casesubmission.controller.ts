@@ -8,6 +8,7 @@ import {
   NotFoundException,
   UseGuards,
   Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { CaseSubmissionService } from './casesubmission.service';
 import { CreateCaseDto } from './dto/createcase.dto';
@@ -15,32 +16,35 @@ import { JwtAuthGuard } from '../auth/auth.guard'; // Import the JwtAuthGuard
 
 @Controller('casesubmissions')
 export class CaseSubmissionController {
+  jwtService: any;
   constructor(private readonly caseSubmissionService: CaseSubmissionService) {}
 
- 
   @Post('new')
-  @UseGuards(JwtAuthGuard)
-  async createCase(@Body() createCaseDto: CreateCaseDto, @Req() req) {
-    try {
-      const user = req.user; // Extract user information from the token
-      const createdCase = await this.caseSubmissionService.createCaseSubmission({
-        ...createCaseDto,
-        cognito_id: user.sub, // Attach the user ID to the case submission
-      });
+@UseGuards(JwtAuthGuard)
+async createCase(@Body() createCaseDto: CreateCaseDto, @Req() req) {
+  console.log('User from token:', req.user); // Debugging
 
-      if (!createdCase) {
-        throw new InternalServerErrorException('Failed to create case submission.');
-      }
-
-      return {
-        message: 'Case submission created successfully!',
-        data: createdCase,
-      };
-    } catch (error) {
-      console.error('❌ Error in createCase:', error);
-      throw new InternalServerErrorException(`Error creating case submission: ${error.message}`);
-    }
+  if (!req.user) {
+    throw new UnauthorizedException('User not authenticated');
   }
+
+  try {
+    const user = req.user;
+
+    const createdCase = await this.caseSubmissionService.createSubmission({
+      ...createCaseDto,
+      user_id: user.sub, // Ensure it's `user_id`, NOT `cognito_id`
+    });
+
+    return {
+      message: 'Case submission created successfully!',
+      data: createdCase,
+    };
+  } catch (error) {
+    console.error('❌ Error in createCase:', error);
+    throw new InternalServerErrorException(`Error creating case submission: ${error.message}`);
+  }
+}
 
   @Get('cases')
   @UseGuards(JwtAuthGuard) // Protect this route with JwtAuthGuard

@@ -61,6 +61,7 @@ export class AuthService {
    * @param idToken - Cognito ID token.
    * @returns User information.
    */
+
   async getUserInfo(idToken: string): Promise<any> {
     try {
       if (!idToken) {
@@ -73,26 +74,24 @@ export class AuthService {
       }
 
       const cognitoId = decodedToken.sub;
-      this.logger.log(`Fetching user info for Cognito ID: ${cognitoId}`);
 
-      const { data, error } = await this.supabaseService
-        .getClient()
-        .from('users')
-        .select('*')
-        .eq('cognito_id', cognitoId)
-        .single();
-
-      if (error || !data) {
+      const user = await this.supabaseService.getUserByCognitoId(cognitoId);
+      if (!user) {
         throw new NotFoundException('User not found in database.');
       }
 
-      return data;
+      return user;
     } catch (error) {
-      this.logger.error(`Error fetching user info: ${error.message}`, error.stack);
+      console.error(`Error fetching user info: ${error.message}`);
+
+      if (error instanceof UnauthorizedException || error instanceof NotFoundException) {
+        throw error;
+      }
+
       throw new InternalServerErrorException('Error fetching user info.');
     }
   }
-
+  
   /**
    * Refreshes the access token using a refresh token.
    * @param refreshToken - Cognito refresh token.

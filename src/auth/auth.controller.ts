@@ -128,39 +128,38 @@ export class AuthController {
     }
   }
 
+  
   @UseGuards(JwtAuthGuard)
-@Get('user')
-async getUserInfo(@Req() req) {
-  try {
-    const authHeader = req.headers['authorization'];
+  @Get('user')
+  async getUserInfo(@Req() req) {
+    try {
+      const authHeader = req.headers['authorization'];
+      if (!authHeader) {
+        throw new UnauthorizedException('Missing Authorization header.');
+      }
 
-    if (!authHeader) {
-      throw new UnauthorizedException('Missing Authorization header.');
+      const idToken = authHeader.split(' ')[1];
+      if (!idToken) {
+        throw new UnauthorizedException('Invalid Authorization token format.');
+      }
+
+      const userInfo = await this.authService.getUserInfo(idToken);
+
+      if (!userInfo) {
+        throw new NotFoundException('User not found in database.');
+      }
+
+      return userInfo;
+    } catch (error) {
+      console.error(`Error fetching user info: ${error.message}`);
+
+      if (error instanceof UnauthorizedException || error instanceof NotFoundException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException('Failed to fetch user info.');
     }
-
-    const idToken = authHeader.split(' ')[1];
-    if (!idToken) {
-      throw new UnauthorizedException('Invalid Authorization token format.');
-    }
-
-    this.logger.log('Received request to fetch user info.');
-    const userInfo = await this.authService.getUserInfo(idToken);
-
-    if (!userInfo) {
-      throw new NotFoundException('User not found in database.');
-    }
-
-    return userInfo;
-  } catch (error) {
-    this.logger.error(`Error fetching user info: ${error.message}`, error.stack);
-
-    if (error instanceof UnauthorizedException || error instanceof NotFoundException) {
-      throw error;
-    }
-
-    throw new InternalServerErrorException('Failed to fetch user info.');
   }
-}
 
   @Patch('update-user')
 @UseGuards(JwtAuthGuard)
