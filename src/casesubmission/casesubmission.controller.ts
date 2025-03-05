@@ -1,34 +1,49 @@
 /* eslint-disable prettier/prettier */
-import { Controller, Post, Get, Body, Request, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  InternalServerErrorException,
+  NotFoundException,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { CaseSubmissionService } from './casesubmission.service';
 import { CreateCaseDto } from './dto/createcase.dto';
+import { JwtAuthGuard } from '../auth/auth.guard'; // Import the JwtAuthGuard
 
 @Controller('casesubmissions')
 export class CaseSubmissionController {
   constructor(private readonly caseSubmissionService: CaseSubmissionService) {}
 
+ 
   @Post('new')
-  async createCase(@Body() createCaseDto: CreateCaseDto) {
+  @UseGuards(JwtAuthGuard)
+  async createCase(@Body() createCaseDto: CreateCaseDto, @Req() req) {
     try {
-      // Call service method without user authentication
-      const createdCase = await this.caseSubmissionService.createCaseSubmission(createCaseDto);
+      const user = req.user; // Extract user information from the token
+      const createdCase = await this.caseSubmissionService.createCaseSubmission({
+        ...createCaseDto,
+        cognito_id: user.sub, // Attach the user ID to the case submission
+      });
 
       if (!createdCase) {
         throw new InternalServerErrorException('Failed to create case submission.');
       }
 
-      return { 
+      return {
         message: 'Case submission created successfully!',
         data: createdCase,
       };
     } catch (error) {
-      console.error('❌ Error in createCase:', error); // Log error
+      console.error('❌ Error in createCase:', error);
       throw new InternalServerErrorException(`Error creating case submission: ${error.message}`);
     }
   }
 
-
-  @Get("cases")
+  @Get('cases')
+  @UseGuards(JwtAuthGuard) // Protect this route with JwtAuthGuard
   async getAllCases() {
     try {
       const cases = await this.caseSubmissionService.getAllCaseSubmissions();
@@ -42,27 +57,23 @@ export class CaseSubmissionController {
         data: cases,
       };
     } catch (error) {
-      // Correctly handle NotFoundException separately
       if (error instanceof NotFoundException) {
         throw error;
       }
-
       throw new Error(`Error retrieving cases: ${error.message}`);
     }
   }
 
   @Get('user')
-  async getUserCases(@Request() req) {
+  @UseGuards(JwtAuthGuard) // Protect this route with JwtAuthGuard
+  async getUserCases(@Req() req) {
     try {
-      if (!req.user || !req.user.userId) {
-        throw new UnauthorizedException('Invalid or missing user authentication.');
-      }
-
-      const userId = req.user.userId;
+      const user = req.user; // Extract user information from the token
+      const userId = user.sub;
 
       const userCases = await this.caseSubmissionService.getCasesByUserId(userId);
-      
-      if (!userCases || userCases.length === 0) { 
+
+      if (!userCases || userCases.length === 0) {
         throw new NotFoundException('No cases found for this user.');
       }
 

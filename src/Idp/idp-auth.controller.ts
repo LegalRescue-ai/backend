@@ -9,16 +9,16 @@ import {
   InternalServerErrorException,
   Post,
   Body,
-  Res 
+  Res,
 } from '@nestjs/common';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import {
   CognitoIdentityProviderClient,
 } from '@aws-sdk/client-cognito-identity-provider';
 import * as crypto from 'crypto';
 import { IdpConfigService } from './idp-config.service';
-import {Response} from 'express'
+import { SupabaseService } from '../casesubmission/supabase.service'; // Ensure this service is implemented
 
 declare module 'express' {
   interface Request {
@@ -27,7 +27,7 @@ declare module 'express' {
       codeVerifier?: string;
       provider?: string;
       nonce?: string;
-      authType: string
+      authType: string;
     };
   }
 }
@@ -40,33 +40,33 @@ interface TokenResponse {
   token_type?: string;
 }
 
-
-
-
 @Controller('auth')
 export class IdpAuthController {
+  [x: string]: any;
   private readonly cognitoClient: CognitoIdentityProviderClient;
   private readonly logger = new Logger(IdpAuthController.name);
+  supabase: any;
 
   constructor(
     private readonly idpConfigService: IdpConfigService,
     private readonly configService: ConfigService,
+    private readonly supabaseService: SupabaseService, // Inject SupabaseService
   ) {
     this.cognitoClient = new CognitoIdentityProviderClient({
       region: this.configService.get<string>('REGION'),
       credentials: {
-        accessKeyId: this.configService.get<string>('AWS_ACCESS_KEY_ID'),
-        secretAccessKey: this.configService.get<string>('AWS_SECRET_ACCESS_KEY'),
+        accessKeyId: this.configService.get<string>('T_AWS_ACCESS_KEY_ID'),
+        secretAccessKey: this.configService.get<string>('T_AWS_SECRET_ACCESS_KEY'),
       },
     });
   }
 
   private getProviderName(provider: string): string {
     const providerMap: { [key: string]: string } = {
-      'google': 'Google',
-      'microsoft': 'Microsoft',
-      'apple': 'SignInWithApple',
-      'facebook': 'Facebook'
+      google: 'Google',
+      microsoft: 'Microsoft',
+      apple: 'SignInWithApple',
+      facebook: 'Facebook',
     };
 
     const mappedName = providerMap[provider.toLowerCase()];
@@ -76,12 +76,9 @@ export class IdpAuthController {
     return mappedName;
   }
 
- 
-
   @Get(':provider')
   async getAuthUrl(
     @Param('provider') provider: string,
-    @Param('authType') authType: 'signUp' | 'login',
     @Req() req: Request,
   ) {
     try {
@@ -103,7 +100,7 @@ export class IdpAuthController {
       const redirectUri = `${this.configService.get<string>('FRONTEND_URL')}/auth/callback`;
 
       const params = new URLSearchParams({
-        client_id: this.configService.get<string>('COGNITO_CLIENT_ID'),
+        client_id: this.configService.get<string>('T_COGNITO_CLIENT_ID'),
         redirect_uri: redirectUri,
         response_type: 'code',
         scope: providerConfig.scopes.join(' '),
@@ -113,22 +110,16 @@ export class IdpAuthController {
         nonce,
         identity_provider: this.getProviderName(provider),
         idp_identifier: 'sub',
-        username_attributes: 'email'
+        username_attributes: 'email',
       });
 
       if (provider.toLowerCase() === 'apple') {
         params.append('response_mode', 'form_post');
       }
 
-      const authUrl = `${this.configService.get('COGNITO_DOMAIN')}/oauth2/authorize?${params.toString()}`;
+      const authUrl = `${this.configService.get('T_COGNITO_DOMAIN')}/oauth2/authorize?${params.toString()}`;
 
-      return {
-        authUrl,
-        state,
-        codeVerifier,
-        nonce,
-        provider
-      };
+      return { authUrl, state, codeVerifier, nonce, provider };
     } catch (error) {
       this.logger.error('Error generating auth URL:', error);
       throw new InternalServerErrorException(
@@ -139,76 +130,63 @@ export class IdpAuthController {
 
   @Post('token')
   async handleTokenExchange(
-    @Body() body: {
-      code: string,
-      redirect_uri: string,
-      codeVerifier: string,
-      provider: string
-    },
-    @Res({passthrough:true}) response: Response
-  )
- 
-  
-  {
+    @Body() body: { code: string; redirect_uri: string; codeVerifier: string; provider: string },
+    @Res({ passthrough: true }) response: Response,
+  ) {
     try {
       const { code, redirect_uri, codeVerifier, provider } = body;
       if (!code || !redirect_uri || !provider) {
         throw new UnauthorizedException('Missing required parameters');
       }
-      console.log("redirect_uri", redirect_uri)
 
-      
-
-     
       const tokens = await this.getTokens(code, redirect_uri, codeVerifier);
       const userInfo = await this.getUserInfo(tokens.access_token);
 
+      // Store user info in Supabase
+      await this.storeUserInSupabase(userInfo.email, userInfo.sub);
 
+      // Set cookies
       response.cookie('idToken', tokens.id_token, {
         httpOnly: true,
         secure: true,
-        sameSite:'none',
+        sameSite: 'none',
         path: '/',
-        maxAge: 60 * 60 * 1000
+        maxAge: 60 * 60 * 1000,
       });
 
       response.cookie('refreshToken', tokens.refresh_token, {
         httpOnly: true,
         secure: true,
-        sameSite:'none',
+        sameSite: 'none',
         path: '/',
-        maxAge: 30 * 24 * 60 * 60 * 1000 
-      })
-      console.log("user_info" , userInfo)
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      });
+
       return {
         email: userInfo.email,
         cognitoSub: userInfo.sub,
-        access_token:tokens.access_token,
-        id_token:tokens.id_token,
-        refresh_token:tokens.refresh_token
+        access_token: tokens.access_token,
+        id_token: tokens.id_token,
+        refresh_token: tokens.refresh_token,
       };
-    
-      
     } catch (error) {
       this.logger.error('Error in token exchange:', error);
       throw new UnauthorizedException(error.message || 'Token exchange failed');
     }
   }
-
   private async getTokens(code: string, redirectUri: string, codeVerifier: string): Promise<TokenResponse> {
     try {
-      const tokenEndpoint = `${this.configService.get('COGNITO_DOMAIN')}/oauth2/token`;
-      const clientId = this.configService.get('COGNITO_CLIENT_ID');
-      const clientSecret = this.configService.get('COGNITO_CLIENT_SECRET');
+      const tokenEndpoint = `${this.configService.get('T_COGNITO_DOMAIN')}/oauth2/token`;
+      const clientId = this.configService.get('T_COGNITO_CLIENT_ID');
+      const clientSecret = this.configService.get('T_COGNITO_CLIENT_SECRET');
 
       const params = new URLSearchParams({
         grant_type: 'authorization_code',
         client_id: clientId,
-        code: code,
+        code,
         code_verifier: codeVerifier,
         redirect_uri: redirectUri,
       });
-      
 
       const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
@@ -216,15 +194,13 @@ export class IdpAuthController {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': `Basic ${credentials}`,
+          Authorization: `Basic ${credentials}`,
         },
         body: params.toString(),
       });
-     
 
       if (!response.ok) {
         const errorData = await response.text();
-        console.log(errorData)
         throw new Error(`Token exchange failed: ${errorData}`);
       }
 
@@ -237,17 +213,15 @@ export class IdpAuthController {
 
   private async getUserInfo(accessToken: string) {
     try {
-      const userinfoEndpoint = `${this.configService.get('COGNITO_DOMAIN')}/oauth2/userInfo`;
+      const userinfoEndpoint = `${this.configService.get('T_COGNITO_DOMAIN')}/oauth2/userInfo`;
       const response = await fetch(userinfoEndpoint, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
       if (!response.ok) {
         throw new Error('Failed to get user info from userinfo endpoint');
       }
-   
+
       return response.json();
     } catch (error) {
       this.logger.error('Error getting user info:', error);
@@ -255,6 +229,29 @@ export class IdpAuthController {
     }
   }
 
+  async upsertUser(email: string, cognitoSub: string): Promise<{ data: any; error: any }> {
+    try {
+      const { data, error } = await this.supabase
+        .from('users')
+        .upsert(
+          {
+            email: email,
+            cognito_sub: cognitoSub,
+            confirmed: true,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: ['cognito_sub'] }
+        );
+  
+      if (error) {
+        this.logger.error('Error upserting user in Supabase:', error);
+      }
+  
+      return { data, error };
+    } catch (err) {
+      this.logger.error('Unexpected error in upsertUser:', err);
+      return { data: null, error: err };
+    }
+  }
   
 }
-  

@@ -5,8 +5,12 @@ import { CreateCaseDto } from "./dto/createcase.dto";
 
 @Injectable()
 export class SupabaseService {
+  getSupabaseUrl() {
+    throw new Error('Method not implemented.');
+  }
   private readonly supabase: SupabaseClient;
   private readonly tableName = "case_submissions"; // Ensure your Supabase table is named correctly
+  logger: any;
 
   constructor() {
     const supabaseUrl = process.env.SUPABASE_URL;
@@ -114,6 +118,33 @@ export class SupabaseService {
     }
   }
 
+  async upsertUser(email: string, cognitoSub: string) {
+    try {
+      const { data, error } = await this.supabase
+        .from('users') // Ensure this is the correct table name
+        .upsert(
+          {
+            email: email,
+            cognito_id: cognitoSub, // Store the Cognito Sub (ID)
+            confirmed: true, // Mark as confirmed since they logged in
+            updated_at: new Date().toISOString(), // Update timestamp
+          },
+          { onConflict: 'cognito_sub' } // Use a string instead of an array
+        );
+  
+      if (error) {
+        this.logger.error('Error upserting user in Supabase:', error);
+        throw new InternalServerErrorException('Failed to save user in Supabase');
+      }
+  
+      return data;
+    } catch (error) {
+      this.logger.error('Unexpected error in upsertUser:', error);
+      throw new InternalServerErrorException('Unexpected error saving user');
+    }
+  }
+
+  
   /**
    * Retrieve submissions linked to a Cognito user
    */
@@ -170,4 +201,6 @@ export class SupabaseService {
     }
     return this.supabase;
   }
+
+  
 }
