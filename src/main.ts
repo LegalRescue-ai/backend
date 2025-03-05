@@ -3,21 +3,46 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import * as dotenv from 'dotenv';
+import * as cookieParser from 'cookie-parser'; // ✅ Import cookie-parser
+import { NestExpressApplication } from '@nestjs/platform-express';
+import * as path from 'path';
+import * as session from 'express-session';
+
 dotenv.config();
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  app.setGlobalPrefix('/api/v1');
-  // Enable CORS correctly
+  // ✅ Middleware: Use cookie-parser
+  app.use(cookieParser());
+
+  // ✅ Serve Static Assets
+  app.useStaticAssets(path.join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads', // Now files are served from /uploads/filename
+  });
+
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET,
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        secure: true,
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000,
+      },
+    }),
+  );
+
+  // ✅ Enable CORS
   app.enableCors({
     origin: [
       'http://localhost:3000',
       'https://tonnel-test-client.d34j9mhleth3x6.amplifyapp.com',
     ],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    allowedHeaders: 'Content-Type, Authorization',
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
   // Global validation pipe
@@ -30,8 +55,20 @@ async function bootstrap() {
       validationError: { target: false, value: false },
     }),
   );
+  // ✅ Global Validation Pipe
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+      transformOptions: { enableImplicitConversion: true },
+      validationError: { target: false, value: false },
+    }),
+  );
 
-  await app.listen(process.env.PORT ?? 3001);
-  console.log(`Server is running on port ${process.env.PORT ?? 3001}`);
+  const PORT = process.env.PORT ?? 3001;
+  await app.listen(PORT);
+  console.log(`🚀 Server is running on port ${PORT}`);
 }
+
 bootstrap();

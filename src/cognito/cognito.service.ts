@@ -18,6 +18,7 @@ import {
   ResendConfirmationCodeCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import * as crypto from 'crypto';
+import { ConfigService } from '@nestjs/config';
 
 export interface UpdateUserProfileDto {
   phone_number?: string;
@@ -30,6 +31,7 @@ export class CognitoService {
   private readonly cognitoClient: CognitoIdentityProviderClient;
 
   constructor(
+    private readonly configService: ConfigService,
     @Inject('COGNITO_CONFIG')
     private readonly config: {
       userPoolId: string;

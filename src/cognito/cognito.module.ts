@@ -2,8 +2,11 @@
 import { Module } from '@nestjs/common';
 
 import { CognitoService } from './cognito.service';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { SupabaseModule } from 'src/casesubmission/supabase.module';
 
 @Module({
+  imports: [ConfigModule, SupabaseModule], // Import ConfigModule
   providers: [
     CognitoService,
     {
@@ -18,6 +21,6 @@ import { CognitoService } from './cognito.service';
       }),
     },
   ],
-  exports: [CognitoService],
+  exports: [CognitoService, 'COGNITO_CONFIG', 'SUPABASE_CONFIG'], // Export both
 })
 export class CognitoModule {}

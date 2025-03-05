@@ -2,7 +2,7 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { ForgotPasswordService } from './forgotpassword.service';
 
-@Controller('auth')
+@Controller('authentication')
 export class ForgotPasswordController {
   constructor(private readonly forgotPasswordService: ForgotPasswordService) {}
 
@@ -23,6 +23,7 @@ export class ForgotPasswordController {
     @Body('email') email: string,
     @Body('password') password: string,
   ): Promise<string> {
+    // Call the service to reset the password in Cognito
     await this.forgotPasswordService.resetPassword(email, password);
     return 'Password reset successfully!';
   }
