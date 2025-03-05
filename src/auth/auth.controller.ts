@@ -218,7 +218,7 @@ async uploadFile(@UploadedFile() file: Express.Multer.File, @Req() req) {
     const supabase = this.supabaseService.getClient();
 
     const fileExt = file.originalname.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
+    const fileName = `${Date.now()}.${fileExt}`; 
     const filePath = `profile-pictures/${user.sub}/${fileName}`;
 
     console.log('Uploading file to Supabase:', filePath);

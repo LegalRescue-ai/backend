@@ -11,8 +11,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { CaseSubmissionService } from './casesubmission.service';
-import { CreateCaseDto } from './dto/createcase.dto';
-import { JwtAuthGuard } from '../auth/auth.guard'; // Import the JwtAuthGuard
+import { JwtAuthGuard } from '../auth/auth.guard'; // Import the  
 
 @Controller('casesubmissions')
 export class CaseSubmissionController {
@@ -20,31 +19,24 @@ export class CaseSubmissionController {
   constructor(private readonly caseSubmissionService: CaseSubmissionService) {}
 
   @Post('new')
-@UseGuards(JwtAuthGuard)
-async createCase(@Body() createCaseDto: CreateCaseDto, @Req() req) {
-  console.log('User from token:', req.user); // Debugging
-
-  if (!req.user || !req.user.sub) {
-    throw new UnauthorizedException('User not authenticated or missing sub in token');
-  }
-
-  try {
-    const userId = String(req.user.sub); // Ensure user_id is a string
-
-    const createdCase = await this.caseSubmissionService.createSubmission({
-      ...createCaseDto,
-      user_id: userId, // Ensure user_id is added correctly
-    });
-
-    return {
-      message: 'Case submission created successfully!',
-      data: createdCase,
-    };
-  } catch (error) {
-    console.error('❌ Error in createCase:', error);
-    throw new InternalServerErrorException(`Error creating case submission: ${error.message}`);
-  }
-}
+  @UseGuards(JwtAuthGuard) // Ensure only authenticated users can submit
+  async createCase(@Body() caseData, @Req() req) {
+    console.log('Extracted user from token:', req.user); // Debugging
+  
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+  
+    // Automatically set user_id from JWT
+    caseData.user_id = req.user.sub;
+  
+    try {
+      return await this.caseSubmissionService.createSubmission(caseData);
+    } catch (error) {
+      console.error('Error in createCase:', error);
+      throw new InternalServerErrorException('Error creating case submission.');
+    }
+  }  
 
 
   @Get('cases')

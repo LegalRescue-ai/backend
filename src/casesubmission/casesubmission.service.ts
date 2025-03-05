@@ -8,23 +8,25 @@ import { CreateCaseDto } from './dto/createcase.dto';
 export class CaseSubmissionService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async createSubmission(createCaseDto: CreateCaseDto) {
+  async createSubmission(caseData: any) {
     try {
-      const { data, error } = await this.supabaseService
-        .getClient()
+      console.log('Received case submission data:', caseData);
+  
+      const result = await this.supabaseService.getClient()
         .from('case_submissions')
-        .insert([createCaseDto])
-        .select();
-
-      if (error) {
-        throw new InternalServerErrorException(`Supabase error: ${error.message}`);
+        .insert([caseData]);
+  
+      if (result.error) {
+        console.error('Supabase insert error:', result.error);
+        throw new InternalServerErrorException('Failed to insert case submission into database.');
       }
-
-      return data;
+  
+      return result.data;
     } catch (error) {
+      console.error('Unexpected error in createSubmission:', error);
       throw new InternalServerErrorException('Error creating case submission.');
     }
-  }
+  }  
 
   async getAllCaseSubmissions() {
     const { data, error } = await this.supabaseService

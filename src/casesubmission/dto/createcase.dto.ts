@@ -1,10 +1,7 @@
 /* eslint-disable prettier/prettier */
-import { IsArray, IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class CreateCaseDto {
-  @IsNotEmpty()
-  @IsString()
-  user_id: string; // ✅ Add this line
   
   @IsString()
   legalCategory: string;
