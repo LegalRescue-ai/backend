@@ -365,95 +365,127 @@ private async getPriceAmount(priceId: string): Promise<number> {
       return 0;
   }
 }
- 
-  private async createInitialSubscriptionRecord(
-    subscription: Stripe.Subscription,
-    metadata: Record<string, string>
-  ): Promise<void> {
-    try {
-      this.logger.debug('Creating initial subscription record', {
-        subscriptionId: subscription.id,
-        metadata: JSON.stringify(metadata),
-      });
+private async createInitialSubscriptionRecord(
+  subscription: Stripe.Subscription,
+  metadata: Record<string, string>
+): Promise<void> {
+  try {
+    this.logger.debug('Creating initial subscription record', {
+      subscriptionId: subscription.id,
+      metadata: JSON.stringify(metadata),
+    });
 
-      if (!metadata.subscriptionData) {
-        throw new Error('Missing subscription data in metadata');
-      }
+    if (!metadata.subscriptionData) {
+      throw new Error('Missing subscription data in metadata');
+    }
 
-      const supabase = this.supabaseService.getClient();
-      const subscriptionData = JSON.parse(metadata.subscriptionData);
-      const discountTier = subscriptionData.discountTier;
-      const basePrice = subscriptionData.originalBasePrice;
-      
-      if (!basePrice || typeof basePrice !== 'number') {
-          throw new Error('Invalid base price in subscription data');
-      }
+    const supabase = this.supabaseService.getClient();
+    const subscriptionData = JSON.parse(metadata.subscriptionData);
+    const discountTier = subscriptionData.discountTier;
+    const basePrice = subscriptionData.originalBasePrice;
+    
+    if (!basePrice || typeof basePrice !== 'number') {
+        throw new Error('Invalid base price in subscription data');
+    }
 
-      const trialEnd = new Date(subscription.trial_end * 1000);
-      
-      if (discountTier) {
-          let nextPrice: number;
-          let discountPercent: number;
-          let remainingDiscountMonths: number;
-          
-          if (discountTier.secondYearDiscount > 0) {
-              nextPrice = Math.round(basePrice * (1 - discountTier.secondYearDiscount / 100));
-              discountPercent = discountTier.secondYearDiscount;
-              remainingDiscountMonths = 12 ;
-          } else if (discountTier.additionalDiscount) {
-              nextPrice = Math.round(basePrice * (1 - discountTier.additionalDiscount.percent / 100));
-              discountPercent = discountTier.additionalDiscount.percent;
-              remainingDiscountMonths = discountTier.additionalDiscount.months;
-          } else {
-              nextPrice = basePrice;
-              discountPercent = 0;
-              remainingDiscountMonths = 0;
-          }
-          
+    const trialEnd = new Date(subscription.trial_end * 1000);
+    
+    if (discountTier) {
+        let nextPrice: number;
+        let discountPercent: number;
+        let remainingDiscountMonths: number;
+        
+        if (discountTier.secondYearDiscount > 0) {
+            nextPrice = Math.round(basePrice * (1 - discountTier.secondYearDiscount / 100));
+            discountPercent = discountTier.secondYearDiscount;
+            remainingDiscountMonths = 12 ;
+        } else if (discountTier.additionalDiscount) {
+            nextPrice = Math.round(basePrice * (1 - discountTier.additionalDiscount.percent / 100));
+            discountPercent = discountTier.additionalDiscount.percent;
+            remainingDiscountMonths = discountTier.additionalDiscount.months;
+        } else {
+            nextPrice = basePrice;
+            discountPercent = 0;
+            remainingDiscountMonths = 0;
+        }
+        
 
-          this.logger.debug('Inserting subscription record with discount', {
-              nextPrice,
-              discountPercent,
-              remainingDiscountMonths,
-          });
+        this.logger.debug('Inserting subscription record with discount', {
+            nextPrice,
+            discountPercent,
+            remainingDiscountMonths,
+        });
 
-          await supabase
-              .from('attorney_subscriptions')
-              .insert({
-                  attorneyId: metadata.attorneyId,
-                  stripesubscriptionid: subscription.id, 
-                  subscriptionStatus: 'trialing',
-                  trialEndsAt: trialEnd,
-                  basePrice,
-                  currentPrice: 0,
-                  nextPriceChange: trialEnd,
-                  nextPrice,
-                  originalBasePrice: basePrice,
-                  discountPercent,
-                  remainingDiscountMonths,
-              });
-      } else {
-          this.logger.debug('Inserting subscription record without discount');
-          await supabase
-              .from('attorney_subscriptions')
-              .insert({
-                  attorneyId: metadata.attorneyId,
-                  stripesubscriptionid: subscription.id, 
-                  subscriptionStatus: 'trialing',
-                  trialEndsAt: trialEnd,
-                  basePrice,
-                  currentPrice: 0,
-                  nextPriceChange: trialEnd,
-                  nextPrice: basePrice,
-                  originalBasePrice: basePrice,
-                  discountPercent: 0,
-                  remainingDiscountMonths: 0,
-              });
-      }
-      this.logger.debug('Successfully created subscription record');
+        const { data: discountData, error: discountError } = await supabase
+            .from('attorney_subscriptions')
+            .insert({
+                attorneyId: metadata.attorneyId,
+                stripesubscriptionid: subscription.id, 
+                subscriptionStatus: 'trialing',
+                trialEndsAt: trialEnd,
+                basePrice,
+                currentPrice: 0,
+                nextPriceChange: trialEnd,
+                nextPrice,
+                originalBasePrice: basePrice,
+                discountPercent,
+                remainingDiscountMonths,
+            });
+            
+        if (discountError) {
+            this.logger.error('Supabase error inserting subscription with discount:', {
+                error: discountError.message,
+                code: discountError.code,
+                details: discountError.details,
+                hint: discountError.hint,
+                subscriptionId: subscription.id,
+                attorneyId: metadata.attorneyId
+            });
+            throw discountError;
+        }
+        
+        this.logger.debug('Successfully inserted subscription with discount', { 
+            data: discountData 
+        });
+    } else {
+        this.logger.debug('Inserting subscription record without discount');
+        const { data: noDiscountData, error: noDiscountError } = await supabase
+            .from('attorney_subscriptions')
+            .insert({
+                attorneyId: metadata.attorneyId,
+                stripesubscriptionid: subscription.id, 
+                subscriptionStatus: 'trialing',
+                trialEndsAt: trialEnd,
+                basePrice,
+                currentPrice: 0,
+                nextPriceChange: trialEnd,
+                nextPrice: basePrice,
+                originalBasePrice: basePrice,
+                discountPercent: 0,
+                remainingDiscountMonths: 0,
+            });
+            
+        if (noDiscountError) {
+            this.logger.error('Supabase error inserting subscription without discount:', {
+                error: noDiscountError.message,
+                code: noDiscountError.code, 
+                details: noDiscountError.details,
+                hint: noDiscountError.hint,
+                subscriptionId: subscription.id,
+                attorneyId: metadata.attorneyId
+            });
+            throw noDiscountError;
+        }
+        
+        this.logger.debug('Successfully inserted subscription without discount', { 
+            data: noDiscountData 
+        });
+    }
+    this.logger.debug('Successfully created subscription record');
   } catch (error) {
       this.logger.error('Error creating subscription record:', {
           error: error.message,
+          stack: error.stack,
           subscriptionId: subscription.id,
       });
       throw error;
