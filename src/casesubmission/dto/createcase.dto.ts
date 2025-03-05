@@ -3,6 +3,9 @@ import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class CreateCaseDto {
   @IsString()
+  cognito_id: string;
+  
+  @IsString()
   legalCategory: string;
 
   @IsOptional()
