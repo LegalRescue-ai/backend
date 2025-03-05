@@ -2,6 +2,7 @@
 import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class CreateCaseDto {
+  
   @IsString()
   legalCategory: string;
 

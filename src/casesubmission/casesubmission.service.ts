@@ -1,47 +1,57 @@
 /* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { CreateCaseDto } from './dto/createcase.dto';
 import { SupabaseService } from './supabase.service';
+import { CreateCaseDto } from './dto/createcase.dto';
 
 @Injectable()
 export class CaseSubmissionService {
-  [x: string]: any;
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async createCaseSubmission(createCaseDto: CreateCaseDto, cognitoId?: string) {
+  async createSubmission(caseData: any) {
     try {
-      // Pass data without requiring Cognito ID
-      return await this.supabaseService.createSubmission(createCaseDto, cognitoId);
+      console.log('Received case submission data:', caseData);
+  
+      const result = await this.supabaseService.getClient()
+        .from('case_submissions')
+        .insert([caseData]);
+  
+      if (result.error) {
+        console.error('Supabase insert error:', result.error);
+        throw new InternalServerErrorException('Failed to insert case submission into database.');
+      }
+  
+      return result.data;
     } catch (error) {
-      console.error('❌ Error in createCaseSubmission:', error); // Log error
-      throw new InternalServerErrorException(`Case submission failed: ${error.message}`);
+      console.error('Unexpected error in createSubmission:', error);
+      throw new InternalServerErrorException('Error creating case submission.');
     }
-  }
+  }  
 
   async getAllCaseSubmissions() {
-    try {
-      const supabase = this.supabaseService.getClient();
-      const { data, error } = await supabase
-        .from('case_submissions') // Ensure this table exists
-        .select('*');
+    const { data, error } = await this.supabaseService
+      .getClient()
+      .from('case_submissions')
+      .select('*');
 
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      return data;
-    } catch (error) {
-      throw new Error(`Supabase query failed: ${error.message}`);
+    if (error) {
+      throw new InternalServerErrorException('Error retrieving case submissions.');
     }
+
+    return data;
   }
 
   async getCasesByUserId(userId: string) {
-    try {
-      // Filter the cases for the specific user
-      const cases = await this.supabaseService.getCasesByUser(userId);
-      return cases;
-    } catch (error) {
-      throw new InternalServerErrorException(`Error fetching user cases: ${error.message}`);
+    const { data, error } = await this.supabaseService
+      .getClient()
+      .from('case_submissions')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (error) {
+      throw new InternalServerErrorException('Error retrieving user cases.');
     }
+
+    return data;
   }
 }
