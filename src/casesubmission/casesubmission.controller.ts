@@ -11,7 +11,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { CaseSubmissionService } from './casesubmission.service';
-import { JwtAuthGuard } from '../auth/auth.guard'; // Import the  
+import { JwtAuthGuard } from '../cognito/auth.guard'; // Import the
 
 @Controller('casesubmissions')
 export class CaseSubmissionController {
@@ -22,22 +22,21 @@ export class CaseSubmissionController {
   @UseGuards(JwtAuthGuard) // Ensure only authenticated users can submit
   async createCase(@Body() caseData, @Req() req) {
     console.log('Extracted user from token:', req.user); // Debugging
-  
+
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
-  
+
     // Automatically set user_id from JWT
     caseData.user_id = req.user.sub;
-  
+
     try {
       return await this.caseSubmissionService.createSubmission(caseData);
     } catch (error) {
       console.error('Error in createCase:', error);
       throw new InternalServerErrorException('Error creating case submission.');
     }
-  }  
-
+  }
 
   @Get('cases')
   @UseGuards(JwtAuthGuard) // Protect this route with JwtAuthGuard
@@ -68,7 +67,8 @@ export class CaseSubmissionController {
       const user = req.user; // Extract user information from the token
       const userId = user.sub;
 
-      const userCases = await this.caseSubmissionService.getCasesByUserId(userId);
+      const userCases =
+        await this.caseSubmissionService.getCasesByUserId(userId);
 
       if (!userCases || userCases.length === 0) {
         throw new NotFoundException('No cases found for this user.');
@@ -79,7 +79,9 @@ export class CaseSubmissionController {
         data: userCases,
       };
     } catch (error) {
-      throw new InternalServerErrorException(`Error retrieving user cases: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Error retrieving user cases: ${error.message}`,
+      );
     }
   }
 }

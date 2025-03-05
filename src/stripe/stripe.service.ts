@@ -20,7 +20,7 @@ export class StripeService {
       throw new Error('STRIPE_SECRET_KEY is missing');
     }
     this.stripe = new Stripe(apiKey, {
-      apiVersion: '2025-01-27.acacia',
+      apiVersion: '2025-02-24.acacia',
     });
     this.logger.debug('StripeService initialized');
   }

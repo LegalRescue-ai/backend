@@ -27,13 +27,13 @@ import { UpdateUserProfileDto } from './dto/update-auth.dto';
 import { CreateAuthDto } from '../auth/dto/create-auth.dto';
 import { CognitoService } from '../cognito/cognito.service';
 import { AuthService } from './auth.service';
-import { LoginUserDto } from './dto/login_user.dto';
+import { LoginUserDto } from '../cognito/dto/login_user.dto';
 import { SupabaseService } from '../casesubmission/supabase.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
-import { ChangePasswordDto } from './dto/change-password.dto';
-import { JwtAuthGuard } from './auth.guard'; // Import the JwtAuthGuard
-import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { ChangePasswordDto } from '../cognito/dto/change-password.dto';
+import { JwtAuthGuard } from '../cognito/auth.guard'; // Import the JwtAuthGuard
+import { RefreshTokenDto } from '../cognito/dto/refresh-token.dto';
 
 @Controller('authenticate')
 export class AuthController {
@@ -50,10 +50,13 @@ export class AuthController {
   @Post('register')
   async register(@Body() registerUserDto: CreateAuthDto) {
     try {
-      const registerResponse = await this.cognitoService.registerUser(registerUserDto);
+      const registerResponse =
+        await this.cognitoService.registerUser(registerUserDto);
       return registerResponse;
     } catch (error) {
-      throw new InternalServerErrorException(error.message || 'An unexpected error occurred');
+      throw new InternalServerErrorException(
+        error.message || 'An unexpected error occurred',
+      );
     }
   }
 
@@ -63,7 +66,9 @@ export class AuthController {
     @Body('confirmationCode') confirmationCode: string,
   ) {
     if (!email || !confirmationCode) {
-      throw new BadRequestException('Email and confirmation code are required.');
+      throw new BadRequestException(
+        'Email and confirmation code are required.',
+      );
     }
 
     return await this.cognitoService.confirmSignUp(email, confirmationCode);
@@ -116,7 +121,9 @@ export class AuthController {
       const totalUsers = await this.cognitoService.getTotalUsers();
 
       if (totalUsers === undefined || totalUsers === null) {
-        throw new InternalServerErrorException('Failed to retrieve user count.');
+        throw new InternalServerErrorException(
+          'Failed to retrieve user count.',
+        );
       }
 
       return {
@@ -128,7 +135,6 @@ export class AuthController {
     }
   }
 
-  
   @UseGuards(JwtAuthGuard)
   @Get('user')
   async getUserInfo(@Req() req) {
@@ -153,7 +159,10 @@ export class AuthController {
     } catch (error) {
       console.error(`Error fetching user info: ${error.message}`);
 
-      if (error instanceof UnauthorizedException || error instanceof NotFoundException) {
+      if (
+        error instanceof UnauthorizedException ||
+        error instanceof NotFoundException
+      ) {
         throw error;
       }
 
@@ -162,105 +171,122 @@ export class AuthController {
   }
 
   @Patch('update-user')
-@UseGuards(JwtAuthGuard)
-async updateUser(@Body() updateUserDto: UpdateUserProfileDto, @Req() req) {
-  const user = req.user; // Extract user info from token
-  const identifier = user.sub; // Use Cognito ID instead of email
+  @UseGuards(JwtAuthGuard)
+  async updateUser(@Body() updateUserDto: UpdateUserProfileDto, @Req() req) {
+    const user = req.user; // Extract user info from token
+    const identifier = user.sub; // Use Cognito ID instead of email
 
-  if (!identifier) {
-    throw new BadRequestException('User ID is required.');
-  }
-
-  try {
-    return await this.cognitoService.updateUserProfile(identifier, updateUserDto);
-  } catch (error) {
-    throw new InternalServerErrorException('Error updating user information');
-  }
-}
-
-@Post('refresh-token')
-@HttpCode(HttpStatus.OK)
-async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
-  const { refreshToken } = refreshTokenDto;
-  
-  try {
-    const newAccessToken = await this.authService.refreshAccessToken(refreshToken);
-    return { newToken: newAccessToken };
-  } catch (error) {
-    throw new Error('Could not refresh token: ' + error.message);
-  }
-}
-
-
-
-@Post('/upload-picture')
-@UseGuards(JwtAuthGuard)
-@UseInterceptors(FileInterceptor('file', { storage: multer.memoryStorage() }))
-async uploadFile(@UploadedFile() file: Express.Multer.File, @Req() req) {
-  console.log('Extracted user from token:', req.user); // Debugging
-  console.log('Received file:', file);
-  console.log('Request Body:', req.body);
-
-  if (!req.user) {
-    throw new UnauthorizedException('User not authenticated');
-  }
-
-  if (!file) {
-    throw new BadRequestException('No file uploaded.');
-  }
-
-  if (!file.mimetype.startsWith('image/')) {
-    throw new BadRequestException('Only image files are allowed.');
-  }
-
-  try {
-    const user = req.user;
-    const supabase = this.supabaseService.getClient();
-
-    const fileExt = file.originalname.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`; 
-    const filePath = `profile-pictures/${user.sub}/${fileName}`;
-
-    console.log('Uploading file to Supabase:', filePath);
-
-    const { error } = await supabase.storage
-      .from('profile-pictures')
-      .upload(filePath, file.buffer, {
-        contentType: file.mimetype, 
-        upsert: true,
-      });
-
-    if (error) {
-      console.error('Supabase upload error:', error);
-      throw new InternalServerErrorException('Failed to upload file to Supabase.');
+    if (!identifier) {
+      throw new BadRequestException('User ID is required.');
     }
 
-    const fileUrl = supabase.storage.from('profile-pictures').getPublicUrl(filePath);
-    console.log('File uploaded successfully:', fileUrl);
-
-    return { fileUrl };
-  } catch (error) {
-    console.error('Upload error:', error);
-    throw new InternalServerErrorException('Error uploading profile picture.');
+    try {
+      return await this.cognitoService.updateUserProfile(
+        identifier,
+        updateUserDto,
+      );
+    } catch (error) {
+      throw new InternalServerErrorException('Error updating user information');
+    }
   }
-}
 
+  @Post('refresh-token')
+  @HttpCode(HttpStatus.OK)
+  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
+    const { refreshToken } = refreshTokenDto;
 
-@Post('change-password')
-@UseGuards(JwtAuthGuard)
-async changePassword(@Body() changePasswordDto: ChangePasswordDto, @Req() req) {
-  try {
-    const accessToken = req.headers['authorization']?.split(' ')[1];
+    try {
+      const newAccessToken =
+        await this.authService.refreshAccessToken(refreshToken);
+      return { newToken: newAccessToken };
+    } catch (error) {
+      throw new Error('Could not refresh token: ' + error.message);
+    }
+  }
 
-    if (!accessToken) {
-      throw new UnauthorizedException('Access token is required');
+  @Post('/upload-picture')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file', { storage: multer.memoryStorage() }))
+  async uploadFile(@UploadedFile() file: Express.Multer.File, @Req() req) {
+    console.log('Extracted user from token:', req.user); // Debugging
+    console.log('Received file:', file);
+    console.log('Request Body:', req.body);
+
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
     }
 
-    const { currentPassword, newPassword } = changePasswordDto;
+    if (!file) {
+      throw new BadRequestException('No file uploaded.');
+    }
 
-    return await this.authService.changePassword(accessToken, currentPassword, newPassword);
-  } catch (error) {
-    throw new HttpException(error.message || 'Failed to change password', HttpStatus.BAD_REQUEST);
+    if (!file.mimetype.startsWith('image/')) {
+      throw new BadRequestException('Only image files are allowed.');
+    }
+
+    try {
+      const user = req.user;
+      const supabase = this.supabaseService.getClient();
+
+      const fileExt = file.originalname.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `profile-pictures/${user.sub}/${fileName}`;
+
+      console.log('Uploading file to Supabase:', filePath);
+
+      const { error } = await supabase.storage
+        .from('profile-pictures')
+        .upload(filePath, file.buffer, {
+          contentType: file.mimetype,
+          upsert: true,
+        });
+
+      if (error) {
+        console.error('Supabase upload error:', error);
+        throw new InternalServerErrorException(
+          'Failed to upload file to Supabase.',
+        );
+      }
+
+      const fileUrl = supabase.storage
+        .from('profile-pictures')
+        .getPublicUrl(filePath);
+      console.log('File uploaded successfully:', fileUrl);
+
+      return { fileUrl };
+    } catch (error) {
+      console.error('Upload error:', error);
+      throw new InternalServerErrorException(
+        'Error uploading profile picture.',
+      );
+    }
   }
-}
+
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  async changePassword(
+    @Body() changePasswordDto: ChangePasswordDto,
+    @Req() req,
+  ) {
+    try {
+      const accessToken = req.headers['authorization']?.split(' ')[1];
+
+      if (!accessToken) {
+        throw new UnauthorizedException('Access token is required');
+      }
+
+      const { currentPassword, newPassword } = changePasswordDto;
+
+      return await this.authService.changePassword(
+        accessToken,
+        currentPassword,
+        newPassword,
+      );
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to change password',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
 }

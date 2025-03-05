@@ -6,7 +6,6 @@ import { TABLES } from 'src/attorney-auth/attorney-auth.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { GetAttorneyDto } from '../dtos/get-attorney-dto';
-import { Privileges } from '../enums/privileges.enum';
 import { MailerService } from 'src/mailer/mailer.service';
 
 @Injectable()

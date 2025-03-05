@@ -13,12 +13,10 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
-import {
-  CognitoIdentityProviderClient,
-} from '@aws-sdk/client-cognito-identity-provider';
+import { CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
 import * as crypto from 'crypto';
 import { IdpConfigService } from './idp-config.service';
-import { SupabaseService } from '../casesubmission/supabase.service'; // Ensure this service is implemented
+import { SupabaseService } from '../supabase/supabase.service'; // Ensure this service is implemented
 
 declare module 'express' {
   interface Request {
@@ -56,7 +54,9 @@ export class IdpAuthController {
       region: this.configService.get<string>('REGION'),
       credentials: {
         accessKeyId: this.configService.get<string>('T_AWS_ACCESS_KEY_ID'),
-        secretAccessKey: this.configService.get<string>('T_AWS_SECRET_ACCESS_KEY'),
+        secretAccessKey: this.configService.get<string>(
+          'T_AWS_SECRET_ACCESS_KEY',
+        ),
       },
     });
   }
@@ -77,10 +77,7 @@ export class IdpAuthController {
   }
 
   @Get(':provider')
-  async getAuthUrl(
-    @Param('provider') provider: string,
-    @Req() req: Request,
-  ) {
+  async getAuthUrl(@Param('provider') provider: string, @Req() req: Request) {
     try {
       const providerConfig = this.idpConfigService.getProviderConfig(provider);
 
@@ -123,14 +120,20 @@ export class IdpAuthController {
     } catch (error) {
       this.logger.error('Error generating auth URL:', error);
       throw new InternalServerErrorException(
-        `Failed to generate authentication URL: ${error.message}`
+        `Failed to generate authentication URL: ${error.message}`,
       );
     }
   }
 
   @Post('token')
   async handleTokenExchange(
-    @Body() body: { code: string; redirect_uri: string; codeVerifier: string; provider: string },
+    @Body()
+    body: {
+      code: string;
+      redirect_uri: string;
+      codeVerifier: string;
+      provider: string;
+    },
     @Res({ passthrough: true }) response: Response,
   ) {
     try {
@@ -174,7 +177,11 @@ export class IdpAuthController {
       throw new UnauthorizedException(error.message || 'Token exchange failed');
     }
   }
-  private async getTokens(code: string, redirectUri: string, codeVerifier: string): Promise<TokenResponse> {
+  private async getTokens(
+    code: string,
+    redirectUri: string,
+    codeVerifier: string,
+  ): Promise<TokenResponse> {
     try {
       const tokenEndpoint = `${this.configService.get('T_COGNITO_DOMAIN')}/oauth2/token`;
       const clientId = this.configService.get('T_COGNITO_CLIENT_ID');
@@ -188,7 +195,9 @@ export class IdpAuthController {
         redirect_uri: redirectUri,
       });
 
-      const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+      const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString(
+        'base64',
+      );
 
       const response = await fetch(tokenEndpoint, {
         method: 'POST',
@@ -229,29 +238,29 @@ export class IdpAuthController {
     }
   }
 
-  async upsertUser(email: string, cognitoSub: string): Promise<{ data: any; error: any }> {
+  async upsertUser(
+    email: string,
+    cognitoSub: string,
+  ): Promise<{ data: any; error: any }> {
     try {
-      const { data, error } = await this.supabase
-        .from('users')
-        .upsert(
-          {
-            email: email,
-            cognito_sub: cognitoSub,
-            confirmed: true,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: ['cognito_sub'] }
-        );
-  
+      const { data, error } = await this.supabase.from('users').upsert(
+        {
+          email: email,
+          cognito_sub: cognitoSub,
+          confirmed: true,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: ['cognito_sub'] },
+      );
+
       if (error) {
         this.logger.error('Error upserting user in Supabase:', error);
       }
-  
+
       return { data, error };
     } catch (err) {
       this.logger.error('Unexpected error in upsertUser:', err);
       return { data: null, error: err };
     }
   }
-  
 }

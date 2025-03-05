@@ -9,7 +9,7 @@ import {
 import { CognitoService } from '../cognito/cognito.service';
 import { SupabaseService } from '../casesubmission/supabase.service';
 import { CreateAuthDto } from '../auth/dto/create-auth.dto';
-import { LoginUserDto } from './dto/login_user.dto';
+import { LoginUserDto } from '../cognito/dto/login_user.dto';
 import * as jwt from 'jsonwebtoken';
 
 @Injectable()
@@ -52,7 +52,9 @@ export class AuthService {
       return await this.cognitoService.loginUser(username, password);
     } catch (error) {
       this.logger.error('Login error:', error);
-      throw new UnauthorizedException(error.message || 'Invalid login credentials.');
+      throw new UnauthorizedException(
+        error.message || 'Invalid login credentials.',
+      );
     }
   }
 
@@ -84,15 +86,17 @@ export class AuthService {
     } catch (error) {
       console.error(`Error fetching user info: ${error.message}`);
 
-      if (error instanceof UnauthorizedException || error instanceof NotFoundException) {
+      if (
+        error instanceof UnauthorizedException ||
+        error instanceof NotFoundException
+      ) {
         throw error;
       }
 
       throw new InternalServerErrorException('Error fetching user info.');
     }
   }
-  
-  
+
   /**
    * Refreshes the access token using a refresh token.
    * @param refreshToken - Cognito refresh token.
