@@ -25,36 +25,21 @@ export class SupabaseService {
     this.supabase = createClient(supabaseUrl, supabaseKey);
   }
 
-  async getUserByCognitoId(cognitoId: string): Promise<any> {
-    const { data, error } = await this.supabase
-      .from('users')
-      .select('*')
-      .eq('cognito_id', cognitoId)
-      .single();
-  
-    if (error) {
-      throw new InternalServerErrorException('Error fetching user from Supabase');
-    }
-  
-    return data;
-  }
-  
-
   /**
    * Create a new case submission in Supabase
    * 
    */
 
-  async createSubmission(createCaseDto: CreateCaseDto, cognitoId?: string) {
+  async createSubmission(createCaseDto: CreateCaseDto, userId?: string) {
     try {
       const submission = {
         ...createCaseDto, // Spread DTO fields into the object
         submitted_at: new Date().toISOString(), // Ensure this matches the column name in Supabase
       };
   
-      // Only add cognito_id if provided
-      if (cognitoId) {
-        submission['cognito_id'] = cognitoId;
+      // Only add user_id if provided
+      if (userId) {
+        submission['user_id'] = userId; // Store user_id instead of cognito_id
       }
   
       // Insert into Supabase table
@@ -73,7 +58,7 @@ export class SupabaseService {
       console.error('❌ Unexpected error in createSubmission:', error);
       throw new InternalServerErrorException('Error creating case submission.');
     }
-  }
+  }  
   
   /**
    * Retrieve all case submissions from Supabase
@@ -190,17 +175,24 @@ export class SupabaseService {
       throw new InternalServerErrorException("Error creating user.");
     }
   }
-  
 
-  /**
-   * Get Supabase client
-   */
-  getClient(): SupabaseClient {
-    if (!this.supabase) {
-      throw new InternalServerErrorException("Supabase client is not initialized.");
+
+  async getUserByCognitoId(cognitoId: string): Promise<any> {
+    const { data, error } = await this.supabase
+      .from('users')
+      .select('*')
+      .eq('cognito_id', cognitoId)
+      .single();
+
+    if (error) {
+      throw new InternalServerErrorException('Error fetching user from Supabase');
     }
-    return this.supabase;
+
+    return data;
   }
 
+  getClient(): SupabaseClient {
+    return this.supabase;
+  }
   
 }
