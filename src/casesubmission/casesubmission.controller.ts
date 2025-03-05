@@ -38,8 +38,7 @@ export class CaseSubmissionController {
     }
   }
 
-  @Get('cases')
-  @UseGuards(JwtAuthGuard) // Protect this route with JwtAuthGuard
+  @Get('cases') // No authentication required
   async getAllCases() {
     try {
       const cases = await this.caseSubmissionService.getAllCaseSubmissions();
@@ -50,22 +49,26 @@ export class CaseSubmissionController {
 
       return {
         message: 'Cases retrieved successfully!',
+        count: cases.length, // Add the count of cases
         data: cases,
       };
     } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      throw new Error(`Error retrieving cases: ${error.message}`);
+      console.error('Error retrieving cases:', error);
+      throw new InternalServerErrorException(
+        'Error retrieving case submissions.',
+      );
     }
   }
 
   @Get('user')
-  @UseGuards(JwtAuthGuard) // Protect this route with JwtAuthGuard
+  @UseGuards(JwtAuthGuard) // Ensure only authenticated users can access
   async getUserCases(@Req() req) {
     try {
-      const user = req.user; // Extract user information from the token
-      const userId = user.sub;
+      const userId = req.user?.sub; // Extract user_id from JWT token
+
+      if (!userId) {
+        throw new UnauthorizedException('User not authenticated');
+      }
 
       const userCases =
         await this.caseSubmissionService.getCasesByUserId(userId);
@@ -79,9 +82,8 @@ export class CaseSubmissionController {
         data: userCases,
       };
     } catch (error) {
-      throw new InternalServerErrorException(
-        `Error retrieving user cases: ${error.message}`,
-      );
+      console.error('Error retrieving user cases:', error);
+      throw new InternalServerErrorException('Error retrieving user cases.');
     }
   }
 }
