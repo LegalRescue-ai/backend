@@ -24,16 +24,16 @@ export class CaseSubmissionController {
 async createCase(@Body() createCaseDto: CreateCaseDto, @Req() req) {
   console.log('User from token:', req.user); // Debugging
 
-  if (!req.user) {
-    throw new UnauthorizedException('User not authenticated');
+  if (!req.user || !req.user.sub) {
+    throw new UnauthorizedException('User not authenticated or missing sub in token');
   }
 
   try {
-    const user = req.user;
+    const userId = String(req.user.sub); // Ensure user_id is a string
 
     const createdCase = await this.caseSubmissionService.createSubmission({
       ...createCaseDto,
-      user_id: user.sub, // Ensure it's `user_id`, NOT `cognito_id`
+      user_id: userId, // Ensure user_id is added correctly
     });
 
     return {
@@ -45,6 +45,7 @@ async createCase(@Body() createCaseDto: CreateCaseDto, @Req() req) {
     throw new InternalServerErrorException(`Error creating case submission: ${error.message}`);
   }
 }
+
 
   @Get('cases')
   @UseGuards(JwtAuthGuard) // Protect this route with JwtAuthGuard

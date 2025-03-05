@@ -191,11 +191,16 @@ async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
   }
 }
 
+
+
 @Post('/upload-picture')
 @UseGuards(JwtAuthGuard)
-@UseInterceptors(FileInterceptor('file'))
+@UseInterceptors(FileInterceptor('file', { storage: multer.memoryStorage() }))
 async uploadFile(@UploadedFile() file: Express.Multer.File, @Req() req) {
   console.log('Extracted user from token:', req.user); // Debugging
+  console.log('Received file:', file);
+  console.log('Request Body:', req.body);
+
   if (!req.user) {
     throw new UnauthorizedException('User not authenticated');
   }
@@ -211,24 +216,35 @@ async uploadFile(@UploadedFile() file: Express.Multer.File, @Req() req) {
   try {
     const user = req.user;
     const supabase = this.supabaseService.getClient();
-    const filePath = `profile-pictures/${user.sub}/${file.originalname}`;
 
-    const { data, error } = await supabase.storage
+    const fileExt = file.originalname.split('.').pop();
+    const fileName = `${Date.now()}.${fileExt}`;
+    const filePath = `profile-pictures/${user.sub}/${fileName}`;
+
+    console.log('Uploading file to Supabase:', filePath);
+
+    const { error } = await supabase.storage
       .from('profile-pictures')
       .upload(filePath, file.buffer, {
-        contentType: file.mimetype,
+        contentType: file.mimetype, 
+        upsert: true,
       });
 
     if (error) {
+      console.error('Supabase upload error:', error);
       throw new InternalServerErrorException('Failed to upload file to Supabase.');
     }
 
-    const fileUrl = `${this.supabaseUrl}/storage/v1/object/public/profile-pictures/${filePath}`;
+    const fileUrl = supabase.storage.from('profile-pictures').getPublicUrl(filePath);
+    console.log('File uploaded successfully:', fileUrl);
+
     return { fileUrl };
   } catch (error) {
+    console.error('Upload error:', error);
     throw new InternalServerErrorException('Error uploading profile picture.');
   }
 }
+
 
 @Post('change-password')
 @UseGuards(JwtAuthGuard)
