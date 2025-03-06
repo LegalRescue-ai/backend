@@ -25,5 +25,5 @@ jobs:
     - run: |
         touch .env
         echo "${{ secrets.PROD }}" > .env
-    - run: npm run build 
+    #run: npm run build 
     - run: pm2 start --name backend npm -- start
