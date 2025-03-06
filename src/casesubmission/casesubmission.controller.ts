@@ -11,7 +11,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { CaseSubmissionService } from './casesubmission.service';
-import { JwtAuthGuard } from '../auth/auth.guard'; // Import the  
+import { JwtAuthGuard } from '../jwt/auth.guard'; // Import the  
 
 @Controller('casesubmissions')
 export class CaseSubmissionController {

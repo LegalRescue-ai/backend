@@ -24,16 +24,16 @@ import {
   HttpCode,
 } from '@nestjs/common';
 import { UpdateUserProfileDto } from './dto/update-auth.dto';
-import { CreateAuthDto } from '../auth/dto/create-auth.dto';
 import { CognitoService } from '../cognito/cognito.service';
 import { AuthService } from './auth.service';
 import { LoginUserDto } from './dto/login_user.dto';
-import { SupabaseService } from '../casesubmission/supabase.service';
+import { SupabaseService } from '../supabase/supabase.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { JwtAuthGuard } from './auth.guard'; // Import the JwtAuthGuard
+import { JwtAuthGuard } from '../jwt/auth.guard'; // Import the JwtAuthGuard
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { CreateAuthDto } from './dto/create-auth.dto';
 
 @Controller('authenticate')
 export class AuthController {

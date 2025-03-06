@@ -18,7 +18,7 @@ import {
 } from '@aws-sdk/client-cognito-identity-provider';
 import * as crypto from 'crypto';
 import { IdpConfigService } from './idp-config.service';
-import { SupabaseService } from '../casesubmission/supabase.service'; // Ensure this service is implemented
+import { SupabaseService } from '../supabase/supabase.service'; // Ensure this service is implemented
 
 declare module 'express' {
   interface Request {
