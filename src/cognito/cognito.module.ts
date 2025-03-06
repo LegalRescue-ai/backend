@@ -2,7 +2,7 @@
 import { Module } from '@nestjs/common';
 import { CognitoService } from './cognito.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { SupabaseModule } from 'src/casesubmission/supabase.module';
+import { SupabaseModule } from '../supabase/supabase.module';
  
 @Module({
   imports: [ConfigModule, SupabaseModule], // Import ConfigModule & SupabaseModule

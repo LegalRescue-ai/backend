@@ -7,8 +7,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { CognitoService } from '../cognito/cognito.service';
-import { SupabaseService } from '../casesubmission/supabase.service';
-import { CreateAuthDto } from '../auth/dto/create-auth.dto';
+import { SupabaseService } from '../supabase/supabase.service';
+import { CreateAuthDto } from './dto/create-auth.dto';
 import { LoginUserDto } from './dto/login_user.dto';
 import * as jwt from 'jsonwebtoken';
 

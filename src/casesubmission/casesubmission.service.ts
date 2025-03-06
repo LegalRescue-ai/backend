@@ -1,8 +1,8 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { SupabaseService } from './supabase.service';
-import { CreateCaseDto } from './dto/createcase.dto';
+import { SupabaseService } from '../supabase/supabase.service';
+import { CreateCaseDto } from '../supabase/dto/createcase.dto';
 
 @Injectable()
 export class CaseSubmissionService {
