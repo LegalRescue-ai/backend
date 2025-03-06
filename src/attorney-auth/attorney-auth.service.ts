@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { DiscountService } from 'src/discount/discount.service';
-import { StripeService } from 'src/stripe/Stripe.service';
 import { SupabaseService } from 'src/supabase/supabase.service';
 import { AttorneySignUpDTO } from 'src/waitlist/dto/attorney_signUp_dto';
 import { UpdateAttorneyDto } from 'src/waitlist/dto/attorney_Update_dto copy';
@@ -26,7 +25,6 @@ export class AttorneyAuthService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly discountService: DiscountService,
-    private readonly stripeService: StripeService,
   ) {
     this.supabaseClient = supabaseService.getClient();
   }
@@ -399,13 +397,6 @@ export class AttorneyAuthService {
       }
     }
 
-    const session = await this.stripeService.createCheckoutSession(
-      normalPrice,
-      attorneyTier,
-      email,
-      attorneyId,
-    );
-
-    return { newUser: attorneyId, url: session.url };
+    return { newUser: attorneyId };
   }
 }

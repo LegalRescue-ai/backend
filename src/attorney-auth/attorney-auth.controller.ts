@@ -62,26 +62,6 @@ export class AttorneyAuthController {
     }
   }
 
-  @Post('/create-checkout-session')
-  async createCheckoutSession(
-    @Body()
-    body: {
-      basePrice: number;
-      attorneyId: string;
-      customerEmail: string;
-      statesLicensing: { barLicenseNumber: string }[];
-    },
-  ) {
-    const { basePrice, customerEmail, attorneyId, statesLicensing } = body;
-    const session = await this.attorneyService.registerAttorneySubscription(
-      customerEmail,
-      attorneyId,
-      basePrice,
-      statesLicensing,
-    );
-    return { url: session.url };
-  }
-
   @Post('/attorney/signin')
   @HttpCode(HttpStatus.OK)
   @UsePipes(ValidationConfig)
