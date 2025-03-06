@@ -4,10 +4,9 @@ import { AttorneyAuthService } from './attorney-auth.service';
 import { AttorneyAuthController } from './attorney-auth.controller';
 import { SupabaseService } from 'src/supabase/supabase.service';
 import { DiscountService } from 'src/discount/discount.service';
-import { CognitoModule } from 'src/cognito/cognito.module';
 
 @Module({
-  imports: [CognitoModule],
+  imports: [],
   providers: [AttorneyAuthService, SupabaseService, DiscountService],
   controllers: [AttorneyAuthController],
 })

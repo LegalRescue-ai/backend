@@ -17,36 +17,10 @@ import { AttorneyAuthService } from './attorney-auth.service';
 import { AttorneySignUpDTO } from 'src/waitlist/dto/attorney_signUp_dto';
 import { UpdateAttorneyDto } from 'src/waitlist/dto/attorney_Update_dto copy';
 import { ValidationConfig } from 'src/config';
-import { CreateAuthDto } from 'src/cognito/dto/create-auth.dto';
-import { LoginUserDto } from 'src/cognito/dto/login_user.dto';
-import { CognitoService } from 'src/cognito/cognito.service';
 
 @Controller('auth')
 export class AttorneyAuthController {
-  constructor(
-    private readonly attorneyService: AttorneyAuthService,
-    private cognitoService: CognitoService,
-  ) {}
-
-  @Post('/register')
-  async register(@Body() registerUserDto: CreateAuthDto) {
-    return this.cognitoService.registerUser(registerUserDto);
-  }
-  @Post('/confirmSignUp')
-  async confirmSignUp(
-    @Body('email') email: string,
-    @Body('confirmationCode') confirmationCode: string,
-  ) {
-    return this.cognitoService.confirmSignUp(email, confirmationCode);
-  }
-
-  @Post('/login')
-  async signin(@Body() loginUserDto: LoginUserDto) {
-    return this.cognitoService.loginUser(
-      loginUserDto.username,
-      loginUserDto.password,
-    );
-  }
+  constructor(private readonly attorneyService: AttorneyAuthService) {}
 
   @Post('/attorney/signup')
   @HttpCode(HttpStatus.CREATED)

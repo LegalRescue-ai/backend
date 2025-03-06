@@ -6,7 +6,6 @@ import { AttorneyAuthModule } from './attorney-auth/attorney-auth.module';
 import { SupabaseService } from './supabase/supabase.service';
 import { DiscountController } from './discount/discount.controller';
 import { DiscountModule } from './discount/discount.module';
-import { CognitoModule } from './cognito/cognito.module';
 import { IdpAuthModule } from './Idp/idp-auth.module';
 import { AdminModule } from './admin/admin.module';
 import { SupabaseModule } from './supabase/supabase.module';
@@ -22,7 +21,6 @@ import { ConfigModule } from '@nestjs/config';
       isGlobal: true,
     }),
     DiscountModule,
-    CognitoModule,
     AdminModule,
     SupabaseModule,
   ],
