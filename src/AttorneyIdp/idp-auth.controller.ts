@@ -41,8 +41,6 @@ interface TokenResponse {
 }
 
 
-
-
 @Controller('auth')
 export class IdpAuthController {
   private readonly cognitoClient: CognitoIdentityProviderClient;
