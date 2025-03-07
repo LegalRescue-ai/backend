@@ -13,6 +13,7 @@ import {
   ChangePasswordCommand,
   CognitoIdentityProviderClient,
   ConfirmSignUpCommand,
+  GetUserCommand,
   InitiateAuthCommand,
   ListUsersCommand,
   ResendConfirmationCodeCommand,
@@ -145,7 +146,7 @@ export class CognitoService {
         throw new BadRequestException(`Missing required field: ${key}`);
       }
     }
-  }
+  } 
 
   private async saveUserToSupabase(userDetails: {
     cognito_id: string;
@@ -167,117 +168,112 @@ export class CognitoService {
 
   async loginUser(username: string, password?: string, refreshToken?: string): Promise<any> {
     try {
-      if (refreshToken) {
-        return await this.handleRefreshTokenLogin(username, refreshToken);
+      // Validate input
+      if (!username) {
+        throw new BadRequestException('Username is required.');
       }
-
+  
+      // Handle refresh token login
+      if (refreshToken) {
+        const refreshCommand = new InitiateAuthCommand({
+          AuthFlow: 'REFRESH_TOKEN_AUTH',
+          ClientId: this.config.clientId,
+          AuthParameters: {
+            REFRESH_TOKEN: refreshToken,
+            SECRET_HASH: this.computeSecretHash(username),
+          },
+        });
+  
+        const refreshResponse = await this.cognitoClient.send(refreshCommand);
+        const authResult = refreshResponse.AuthenticationResult;
+  
+        if (!authResult?.AccessToken || !authResult?.IdToken) {
+          throw new UnauthorizedException('Failed to refresh the token.');
+        }
+  
+        return {
+          accessToken: authResult.AccessToken,
+          idToken: authResult.IdToken,
+          refreshToken,
+        };
+      }
+  
+      // Handle password login
       if (!password) {
         throw new UnauthorizedException('Password is required.');
       }
-
-      return await this.handlePasswordLogin(username, password);
+  
+      const authCommand = new InitiateAuthCommand({
+        AuthFlow: 'USER_PASSWORD_AUTH',
+        ClientId: this.config.clientId,
+        AuthParameters: {
+          USERNAME: username,
+          PASSWORD: password,
+          SECRET_HASH: this.computeSecretHash(username),
+        },
+      });
+  
+      const response = await this.cognitoClient.send(authCommand);
+      const authResult = response.AuthenticationResult;
+  
+      if (!authResult) {
+        throw new UnauthorizedException('Authentication failed.');
+      }
+  
+      return {
+        accessToken: authResult.AccessToken,
+        idToken: authResult.IdToken, // Added ID Token
+        refreshToken: authResult.RefreshToken,
+      };
     } catch (error) {
       console.error('Login error:', error);
-      if (error instanceof UnauthorizedException || error instanceof NotFoundException) {
+  
+      if (
+        error instanceof UnauthorizedException ||
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
+  
       throw new InternalServerErrorException('Login failed.');
     }
-  }
-
-  async handleRefreshTokenLogin(username: string, refreshToken: string): Promise<any> {
-    const refreshCommand = new InitiateAuthCommand({
-      AuthFlow: 'REFRESH_TOKEN_AUTH',
-      ClientId: this.config.clientId,
-      AuthParameters: {
-        REFRESH_TOKEN: refreshToken,
-        SECRET_HASH: this.computeSecretHash(username),
-      },
-    });
-
-    const refreshResponse = await this.cognitoClient.send(refreshCommand);
-    if (!refreshResponse.AuthenticationResult?.IdToken) {
-      throw new UnauthorizedException('Failed to refresh the token.');
-    }
-
-    const userInfo = await this.getUserInfo(refreshResponse.AuthenticationResult.IdToken);
-    if (!userInfo) throw new UnauthorizedException('User verification failed.');
-
-    return {
-      idToken: refreshResponse.AuthenticationResult.IdToken,
-      accessToken: refreshResponse.AuthenticationResult.AccessToken,
-      refreshToken,
-      user: userInfo,
-    };
-  }
-
-  private async handlePasswordLogin(username: string, password: string): Promise<any> {
-    const authCommand = new InitiateAuthCommand({
-      AuthFlow: 'USER_PASSWORD_AUTH',
-      ClientId: this.config.clientId,
-      AuthParameters: {
-        USERNAME: username,
-        PASSWORD: password,
-        SECRET_HASH: this.computeSecretHash(username),
-      },
-    });
-
-    const response = await this.cognitoClient.send(authCommand);
-    if (!response.AuthenticationResult) {
-      throw new UnauthorizedException('Authentication failed.');
-    }
-
-    const { IdToken, AccessToken, RefreshToken } = response.AuthenticationResult;
-    const decodedToken = jwt.decode(IdToken) as any;
-
-    const cognitoId = decodedToken?.sub;
-    if (!cognitoId) {
-      throw new InternalServerErrorException('Failed to retrieve Cognito ID.');
-    }
-
-    const userInfo = await this.getUserInfo(IdToken);
-    if (!userInfo) {
-      throw new NotFoundException('User not found.');
-    }
-
-    return {
-      idToken: IdToken,
-      accessToken: AccessToken,
-      refreshToken: RefreshToken,
-      user: userInfo,
-    };
-  }
+  }  
 
   async getUserInfo(idToken: string): Promise<any> {
     try {
+      // Decode the ID token to get user information
       const decodedToken = jwt.decode(idToken) as any;
-
+  
       if (!decodedToken) {
         throw new UnauthorizedException('Invalid ID Token.');
       }
-
+  
+      // Extract the email from the decoded token
       const email = decodedToken.email;
-
+  
       if (!email) {
         throw new UnauthorizedException('Email not found in the token.');
       }
-
+  
+      // Fetch user details from Supabase using the email
       const { data, error } = await this.supabase
         .from('users')
         .select('*')
         .eq('email', email)
         .single();
-
+  
       if (error || !data) {
         throw new InternalServerErrorException('Failed to fetch user details.');
       }
-
+  
       return data;
     } catch (error) {
-      throw new InternalServerErrorException(error.message || 'Error fetching user info.');
+      console.error('Error getting user info:', error);
+      throw new InternalServerErrorException(`Failed to get user info: ${error.message}`);
     }
   }
-
+  
   async updateUser(accessToken: string, updatedUserAttributes: UpdateUserProfileDto): Promise<any> {
     const userAttributes = Object.entries(updatedUserAttributes)
       .filter(([_, value]) => value !== undefined)

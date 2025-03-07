@@ -18,7 +18,7 @@ import {
 } from '@aws-sdk/client-cognito-identity-provider';
 import * as crypto from 'crypto';
 import { IdpConfigService } from './idp-config.service';
-import { SupabaseService } from '../supabase/supabase.service'; // Ensure this service is implemented
+import { SupabaseService } from '../supabase/supabase.service';
 
 declare module 'express' {
   interface Request {
@@ -42,10 +42,8 @@ interface TokenResponse {
 
 @Controller('auth')
 export class IdpAuthController {
-  [x: string]: any;
   private readonly cognitoClient: CognitoIdentityProviderClient;
   private readonly logger = new Logger(IdpAuthController.name);
-  supabase: any;
 
   constructor(
     private readonly idpConfigService: IdpConfigService,
@@ -174,6 +172,7 @@ export class IdpAuthController {
       throw new UnauthorizedException(error.message || 'Token exchange failed');
     }
   }
+
   private async getTokens(code: string, redirectUri: string, codeVerifier: string): Promise<TokenResponse> {
     try {
       const tokenEndpoint = `${this.configService.get('T_COGNITO_DOMAIN')}/oauth2/token`;
@@ -229,9 +228,10 @@ export class IdpAuthController {
     }
   }
 
-  async upsertUser(email: string, cognitoSub: string): Promise<{ data: any; error: any }> {
+  private async storeUserInSupabase(email: string, cognitoSub: string): Promise<{ data: any; error: any }> {
     try {
-      const { data, error } = await this.supabase
+      const supabaseClient = this.supabaseService.getClient();
+      const { data, error } = await supabaseClient
         .from('users')
         .upsert(
           {
@@ -240,7 +240,7 @@ export class IdpAuthController {
             confirmed: true,
             updated_at: new Date().toISOString(),
           },
-          { onConflict: ['cognito_sub'] }
+          { onConflict: 'cognito_sub' } // Use a string here, not an array
         );
   
       if (error) {
@@ -253,5 +253,4 @@ export class IdpAuthController {
       return { data: null, error: err };
     }
   }
-  
 }

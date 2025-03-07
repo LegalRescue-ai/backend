@@ -6,6 +6,9 @@ export class CreateCaseDto {
   @IsString()
   legalCategory: string;
 
+  @IsString()
+  status?: string;
+
   @IsOptional()
   @IsString()
   state?: string;

@@ -6,6 +6,7 @@ import { CreateCaseDto } from '../supabase/dto/createcase.dto';
 
 @Injectable()
 export class CaseSubmissionService {
+  supabase: any;
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async createSubmission(caseData: any) {
@@ -53,5 +54,25 @@ export class CaseSubmissionService {
     }
 
     return data;
+  }
+    
+  async updateCaseStatus(caseId: string, newStatus: string) {
+    try {
+      const { data, error } = await this.supabase
+        .from('case_submissions')
+        .update({ status: newStatus })
+        .eq('id', caseId)
+        .select();
+  
+      if (error) {
+        console.error('❌ Supabase error (updateCaseStatus):', error);
+        throw new InternalServerErrorException(`Supabase error: ${error.message}`);
+      }
+  
+      return data?.[0] || null;
+    } catch (error) {
+      console.error('❌ Unexpected error in updateCaseStatus:', error);
+      throw new InternalServerErrorException('Error updating case status.');
+    }
   }
 }
