@@ -274,7 +274,9 @@ export class AttorneyAuthService {
       messageNotifications,
       platformUpdateNotifications,
       cognitoId,
-      isActive
+      isActive,
+      accountStatus,
+      createdAt
     `,
       { count: 'exact' },
     );

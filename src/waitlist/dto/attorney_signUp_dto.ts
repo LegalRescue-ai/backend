@@ -17,6 +17,7 @@ import {
   MaxLength,
   Matches,
   ArrayMinSize,
+  IsDate,
 } from 'class-validator';
 import {
   awardsEntry,
@@ -246,4 +247,9 @@ export class AttorneySignUpDTO {
   @IsOptional()
   @IsBoolean()
   platformUpdateNotifications?: boolean;
+
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  createdAt?: Date;
 }
