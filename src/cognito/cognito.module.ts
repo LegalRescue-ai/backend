@@ -11,9 +11,9 @@ import { SupabaseModule } from '../supabase/supabase.module';
       provide: 'COGNITO_CONFIG',
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        userPoolId: configService.get<string>('T_COGNITO_USER_POOL_ID'),
-        clientId: configService.get<string>('T_COGNITO_CLIENT_ID'),
-        clientSecret: configService.get<string>('T_COGNITO_CLIENT_SECRET'),
+        userPoolId: configService.get<string>('COGNITO_USER_POOL_ID'),
+        clientId: configService.get<string>('COGNITO_CLIENT_ID'),
+        clientSecret: configService.get<string>('COGNITO_CLIENT_SECRET'),
         awsRegion: configService.get<string>('REGION'),
       }),
     },

@@ -29,22 +29,18 @@ export class SupabaseService {
    * Create a new case submission in Supabase
    * 
    */
-
-  async createSubmission(createCaseDto: CreateCaseDto, userId?: string) {
+  
+  async createSubmission(createCaseDto: CreateCaseDto, userId: string) {
     try {
       const submission = {
-        ...createCaseDto, // Spread DTO fields into the object
-        submitted_at: new Date().toISOString(), // Ensure this matches the column name in Supabase
+        ...createCaseDto,
+        user_id: userId,
+        submitted_at: new Date().toISOString(),
+        status: createCaseDto.status || "Case Submitted", // ✅ Default status if not provided
       };
   
-      // Only add user_id if provided
-      if (userId) {
-        submission['user_id'] = userId; // Store user_id instead of cognito_id
-      }
-  
-      // Insert into Supabase table
       const { data, error } = await this.supabase
-        .from('case_submissions') // Ensure this matches the table name in Supabase
+        .from('case_submissions')
         .insert([submission])
         .select();
   
@@ -53,12 +49,13 @@ export class SupabaseService {
         throw new InternalServerErrorException(`Supabase error: ${error.message}`);
       }
   
-      return data?.[0] || null; // Return inserted case submission
+      return data?.[0] || null;
     } catch (error) {
       console.error('❌ Unexpected error in createSubmission:', error);
       throw new InternalServerErrorException('Error creating case submission.');
     }
-  }  
+  } 
+
   
   /**
    * Retrieve all case submissions from Supabase

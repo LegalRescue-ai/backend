@@ -27,7 +27,7 @@ export class IdpConfigService {
         authEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
         tokenEndpoint: 'https://oauth2.googleapis.com/token',
         userInfoEndpoint: 'https://www.googleapis.com/oauth2/v3/userinfo',
-        scopes: ['openid', 'email', 'profile']
+        scopes: ['openid','email', 'phone']
       },
       microsoft: {
         clientId: this.configService.get<string>('MICROSOFT_CLIENT_ID'),
@@ -35,7 +35,7 @@ export class IdpConfigService {
         authEndpoint: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
         tokenEndpoint: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
         userInfoEndpoint: 'https://graph.microsoft.com/oidc/userinfo',
-        scopes: ['openid', 'email', 'profile']
+        scopes: ['openid', 'email', 'phone']
       },
       apple: {
         clientId: this.configService.get<string>('APPLE_CLIENT_ID'),
