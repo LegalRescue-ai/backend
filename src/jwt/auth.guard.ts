@@ -10,10 +10,10 @@ export class JwtAuthGuard implements CanActivate {
   private jwksUrl: string;
 
   constructor() {
-    if (!process.env.REGION || !process.env.T_COGNITO_USER_POOL_ID) {
+    if (!process.env.REGION || !process.env.COGNITO_USER_POOL_ID) {
       throw new Error('AWS_REGION or COGNITO_USER_POOL_ID is not set.');
     }
-    this.jwksUrl = `https://cognito-idp.${process.env.REGION}.amazonaws.com/${process.env.T_COGNITO_USER_POOL_ID}/.well-known/jwks.json`;
+    this.jwksUrl = `https://cognito-idp.${process.env.REGION}.amazonaws.com/${process.env.COGNITO_USER_POOL_ID}/.well-known/jwks.json`;
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {

@@ -168,77 +168,86 @@ export class CognitoService {
 
   async loginUser(username: string, password?: string, refreshToken?: string): Promise<any> {
     try {
-      // Validate input
-      if (!username) {
-        throw new BadRequestException('Username is required.');
-      }
-  
-      // Handle refresh token login
       if (refreshToken) {
-        const refreshCommand = new InitiateAuthCommand({
-          AuthFlow: 'REFRESH_TOKEN_AUTH',
-          ClientId: this.config.clientId,
-          AuthParameters: {
-            REFRESH_TOKEN: refreshToken,
-            SECRET_HASH: this.computeSecretHash(username),
-          },
-        });
-  
-        const refreshResponse = await this.cognitoClient.send(refreshCommand);
-        const authResult = refreshResponse.AuthenticationResult;
-  
-        if (!authResult?.AccessToken || !authResult?.IdToken) {
-          throw new UnauthorizedException('Failed to refresh the token.');
-        }
-  
-        return {
-          accessToken: authResult.AccessToken,
-          idToken: authResult.IdToken,
-          refreshToken,
-        };
+        return await this.handleRefreshTokenLogin(username, refreshToken);
       }
-  
-      // Handle password login
+
       if (!password) {
         throw new UnauthorizedException('Password is required.');
       }
-  
-      const authCommand = new InitiateAuthCommand({
-        AuthFlow: 'USER_PASSWORD_AUTH',
-        ClientId: this.config.clientId,
-        AuthParameters: {
-          USERNAME: username,
-          PASSWORD: password,
-          SECRET_HASH: this.computeSecretHash(username),
-        },
-      });
-  
-      const response = await this.cognitoClient.send(authCommand);
-      const authResult = response.AuthenticationResult;
-  
-      if (!authResult) {
-        throw new UnauthorizedException('Authentication failed.');
-      }
-  
-      return {
-        accessToken: authResult.AccessToken,
-        idToken: authResult.IdToken, // Added ID Token
-        refreshToken: authResult.RefreshToken,
-      };
+
+      return await this.handlePasswordLogin(username, password);
     } catch (error) {
       console.error('Login error:', error);
-  
-      if (
-        error instanceof UnauthorizedException ||
-        error instanceof NotFoundException ||
-        error instanceof BadRequestException
-      ) {
+      if (error instanceof UnauthorizedException || error instanceof NotFoundException) {
         throw error;
       }
-  
       throw new InternalServerErrorException('Login failed.');
     }
-  }  
+  }
+
+  private async handlePasswordLogin(username: string, password: string): Promise<any> {
+    const authCommand = new InitiateAuthCommand({
+      AuthFlow: 'USER_PASSWORD_AUTH',
+      ClientId: this.config.clientId,
+      AuthParameters: {
+        USERNAME: username,
+        PASSWORD: password,
+        SECRET_HASH: this.computeSecretHash(username),
+      },
+    });
+
+    const response = await this.cognitoClient.send(authCommand);
+    if (!response.AuthenticationResult) {
+      throw new UnauthorizedException('Authentication failed.');
+    }
+
+    const { IdToken, AccessToken, RefreshToken } = response.AuthenticationResult;
+    const decodedToken = jwt.decode(IdToken) as any;
+
+    const cognitoId = decodedToken?.sub;
+    if (!cognitoId) {
+      throw new InternalServerErrorException('Failed to retrieve Cognito ID.');
+    }
+
+    const userInfo = await this.getUserInfo(IdToken);
+    if (!userInfo) {
+      throw new NotFoundException('User not found.');
+    }
+
+    return {
+      idToken: IdToken,
+      accessToken: AccessToken,
+      refreshToken: RefreshToken,
+      user: userInfo,
+    };
+  }
+
+  async handleRefreshTokenLogin(username: string, refreshToken: string): Promise<any> {
+    const refreshCommand = new InitiateAuthCommand({
+      AuthFlow: 'REFRESH_TOKEN_AUTH',
+      ClientId: this.config.clientId,
+      AuthParameters: {
+        REFRESH_TOKEN: refreshToken,
+        SECRET_HASH: this.computeSecretHash(username),
+      },
+    });
+
+    const refreshResponse = await this.cognitoClient.send(refreshCommand);
+    if (!refreshResponse.AuthenticationResult?.IdToken) {
+      throw new UnauthorizedException('Failed to refresh the token.');
+    }
+
+    const userInfo = await this.getUserInfo(refreshResponse.AuthenticationResult.IdToken);
+    if (!userInfo) throw new UnauthorizedException('User verification failed.');
+
+    return {
+      idToken: refreshResponse.AuthenticationResult.IdToken,
+      accessToken: refreshResponse.AuthenticationResult.AccessToken,
+      refreshToken,
+      user: userInfo,
+    };
+  }
 
   async getUserInfo(idToken: string): Promise<any> {
     try {
@@ -273,12 +282,13 @@ export class CognitoService {
       throw new InternalServerErrorException(`Failed to get user info: ${error.message}`);
     }
   }
+
   
   async updateUser(accessToken: string, updatedUserAttributes: UpdateUserProfileDto): Promise<any> {
     const userAttributes = Object.entries(updatedUserAttributes)
       .filter(([_, value]) => value !== undefined)
       .map(([Name, Value]) => ({ Name, Value }));
-
+ 
     try {
       const command = new UpdateUserAttributesCommand({
         AccessToken: accessToken,
@@ -333,18 +343,40 @@ export class CognitoService {
 
   async getTotalUsers(): Promise<number> {
     try {
-      const userPoolId = this.configService.get<string>('COGNITO_USER_POOL_ID');
-      if (!userPoolId) {
-        throw new InternalServerErrorException('Cognito User Pool ID is not defined.');
+      const { count, error } = await this.supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true });
+  
+      if (error) {
+        console.error('Error fetching total users:', error);
+        throw new InternalServerErrorException('Failed to fetch total users.');
       }
-
-      const command = new ListUsersCommand({ UserPoolId: userPoolId });
-      const response = await this.cognitoClient.send(command);
-      return response.Users?.length || 0;
+  
+      return count || 0;
     } catch (error) {
+      console.error('Error in getTotalUsers:', error);
+      throw new InternalServerErrorException('Failed to fetch total users.');
+    }
+  }
+  
+  async getAllUserInfo(): Promise<any[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('users')
+        .select('id, email, firstname, lastname, created_at');
+  
+      if (error) {
+        console.error('Error fetching users from Supabase:', error);
+        throw new InternalServerErrorException('Failed to fetch users.');
+      }
+  
+      return data || [];
+    } catch (error) {
+      console.error('Error in getAllUserInfo:', error);
       throw new InternalServerErrorException('Failed to fetch users.');
     }
   }
+  
 
   async updateUserProfile(identifier: string, updateUserDto: UpdateUserProfileDto) {
     try {
