@@ -128,6 +128,26 @@ export class AuthController {
     }
   }
 
+  @Get('user-info')
+  async getAllUsers() {
+    try {
+      const users = await this.cognitoService.getAllUserInfo();
+
+      if (!users || users.length === 0) {
+        throw new NotFoundException('No users found.');
+      }
+
+      return {
+        message: 'List of all registered users',
+        data: users,
+      };
+    } catch (error) {
+      console.error('Error fetching user details:', error);
+      throw new InternalServerErrorException('Error retrieving user details');
+    }
+  }
+
+
   
   @UseGuards(JwtAuthGuard)
   @Get('user')
