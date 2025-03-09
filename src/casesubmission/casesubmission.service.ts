@@ -65,13 +65,13 @@ export class CaseSubmissionService {
         .select();
   
       if (error) {
-        console.error('❌ Supabase error (updateCaseStatus):', error);
+        console.error('Supabase error (updateCaseStatus):', error);
         throw new InternalServerErrorException(`Supabase error: ${error.message}`);
       }
   
       return data?.[0] || null;
     } catch (error) {
-      console.error('❌ Unexpected error in updateCaseStatus:', error);
+      console.error('Unexpected error in updateCaseStatus:', error);
       throw new InternalServerErrorException('Error updating case status.');
     }
   }

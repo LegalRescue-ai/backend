@@ -251,14 +251,12 @@ export class CognitoService {
 
   async getUserInfo(idToken: string): Promise<any> {
     try {
-      // Decode the ID token to get user information
       const decodedToken = jwt.decode(idToken) as any;
   
       if (!decodedToken) {
         throw new UnauthorizedException('Invalid ID Token.');
       }
   
-      // Extract the email from the decoded token
       const email = decodedToken.email;
   
       if (!email) {
@@ -464,9 +462,6 @@ export class CognitoService {
     }
   }
 
-  /**
-   * Get Cognito Public Key: Fetches and caches the JWKs for JWT verification.
-   */
   async getPublicKey(): Promise<string[]> {
     if (this.cognitoJwks) {
       return this.cognitoJwks;
@@ -474,7 +469,7 @@ export class CognitoService {
   
     try {
       const userPoolId = this.configService.get<string>('COGNITO_USER_POOL_ID');
-      const url = `https://cognito-idp.${this.configService.get<string>('AWS_REGION')}.amazonaws.com/${userPoolId}/.well-known/jwks.json`;
+      const url = `https://cognito-idp.${this.configService.get<string>('REGION')}.amazonaws.com/${userPoolId}/.well-known/jwks.json`;
   
       const response = await axios.get(url);
       this.cognitoJwks = response.data.keys.map((key: any) => jwkToPem(key)); // Convert JWK to PEM format

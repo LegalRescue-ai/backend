@@ -3,10 +3,10 @@ import { Module } from '@nestjs/common';
 import { IdpAuthController } from './idp-auth.controller';
 import { IdpConfigService } from './idp-config.service';
 import { ConfigModule } from '@nestjs/config';
-import { SupabaseModule } from '../supabase/supabase.module'; // Import the module
+import { SupabaseModule } from '../supabase/supabase.module'; 
 
 @Module({
-  imports: [ConfigModule, SupabaseModule], // Add SupabaseModule here
+  imports: [ConfigModule, SupabaseModule], 
   controllers: [IdpAuthController],
   providers: [IdpConfigService],
 })

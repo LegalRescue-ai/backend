@@ -9,7 +9,7 @@ export class SupabaseService {
     throw new Error('Method not implemented.');
   }
   private readonly supabase: SupabaseClient;
-  private readonly tableName = "case_submissions"; // Ensure your Supabase table is named correctly
+  private readonly tableName = "case_submissions"; 
   logger: any;
 
   constructor() {
@@ -25,18 +25,14 @@ export class SupabaseService {
     this.supabase = createClient(supabaseUrl, supabaseKey);
   }
 
-  /**
-   * Create a new case submission in Supabase
-   * 
-   */
-  
+
   async createSubmission(createCaseDto: CreateCaseDto, userId: string) {
     try {
       const submission = {
         ...createCaseDto,
         user_id: userId,
         submitted_at: new Date().toISOString(),
-        status: createCaseDto.status || "Case Submitted", // ✅ Default status if not provided
+        status: createCaseDto.status || "Case Submitted", 
       };
   
       const { data, error } = await this.supabase
@@ -45,21 +41,17 @@ export class SupabaseService {
         .select();
   
       if (error) {
-        console.error('❌ Supabase error (createSubmission):', error);
+        console.error('Supabase error (createSubmission):', error);
         throw new InternalServerErrorException(`Supabase error: ${error.message}`);
       }
   
       return data?.[0] || null;
     } catch (error) {
-      console.error('❌ Unexpected error in createSubmission:', error);
+      console.error('Unexpected error in createSubmission:', error);
       throw new InternalServerErrorException('Error creating case submission.');
     }
   } 
 
-  
-  /**
-   * Retrieve all case submissions from Supabase
-   */
   async getAllSubmissions() {
     try {
       const { data, error } = await this.supabase.from(this.tableName).select("*");
@@ -72,14 +64,12 @@ export class SupabaseService {
 
       return data;
     } catch (error) {
-      console.error("❌ Error in getAllSubmissions:", error);
+      console.error("Error in getAllSubmissions:", error);
       throw new InternalServerErrorException("Error retrieving case submissions.");
     }
   }
 
-  /**
-   * Retrieve cases by a specific user from Supabase
-   */
+
   async getCasesByUser(userId: string) {
     try {
       const { data, error } = await this.supabase
@@ -95,7 +85,7 @@ export class SupabaseService {
 
       return data;
     } catch (error) {
-      console.error("❌ Error in getCasesByUser:", error);
+      console.error("Error in getCasesByUser:", error);
       throw new InternalServerErrorException("Error retrieving user cases.");
     }
   }
@@ -103,15 +93,15 @@ export class SupabaseService {
   async upsertUser(email: string, cognitoSub: string) {
     try {
       const { data, error } = await this.supabase
-        .from('users') // Ensure this is the correct table name
+        .from('users') 
         .upsert(
           {
             email: email,
-            cognito_id: cognitoSub, // Store the Cognito Sub (ID)
-            confirmed: true, // Mark as confirmed since they logged in
-            updated_at: new Date().toISOString(), // Update timestamp
+            cognito_id: cognitoSub, 
+            confirmed: true,
+            updated_at: new Date().toISOString(), 
           },
-          { onConflict: 'cognito_sub' } // Use a string instead of an array
+          { onConflict: 'cognito_sub' }
         );
   
       if (error) {
@@ -126,16 +116,13 @@ export class SupabaseService {
     }
   }
 
-  
-  /**
-   * Retrieve submissions linked to a Cognito user
-   */
+
   async getSubmissionsByCognitoId(cognitoId: string) {
     try {
       const { data, error } = await this.supabase
         .from(this.tableName)
         .select("*")
-        .eq("cognito_id", cognitoId); // Ensure your Supabase table has a "cognito_id" field
+        .eq("cognito_id", cognitoId); 
 
       if (error) {
         throw new InternalServerErrorException(
@@ -145,18 +132,16 @@ export class SupabaseService {
 
       return data;
     } catch (error) {
-      console.error("❌ Error in getSubmissionsByCognitoId:", error);
+      console.error("Error in getSubmissionsByCognitoId:", error);
       throw new InternalServerErrorException("Error retrieving user submissions.");
     }
   }
 
-  /**
-   * Create a new user in Supabase
-   */
+ 
   async createUser(user: { id: string; email: string; name?: string }) {
     try {
       const { data, error } = await this.supabase
-        .from("users") // Ensure your table is named 'users'
+        .from("users") 
         .insert([user])
         .select();
 
@@ -168,7 +153,7 @@ export class SupabaseService {
 
       return data?.[0] || null;
     } catch (error) {
-      console.error("❌ Error in createUser:", error);
+      console.error("Error in createUser:", error);
       throw new InternalServerErrorException("Error creating user.");
     }
   }

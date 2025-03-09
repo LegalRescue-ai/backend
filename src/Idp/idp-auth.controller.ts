@@ -48,7 +48,7 @@ export class IdpAuthController {
   constructor(
     private readonly idpConfigService: IdpConfigService,
     private readonly configService: ConfigService,
-    private readonly supabaseService: SupabaseService, // Inject SupabaseService
+    private readonly supabaseService: SupabaseService, 
   ) {
     this.cognitoClient = new CognitoIdentityProviderClient({
       region: this.configService.get<string>('REGION'),

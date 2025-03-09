@@ -1,6 +1,4 @@
 /* eslint-disable prettier/prettier */
-
-
 export interface ProviderConfig {
   clientId: string;
   clientSecret: string;

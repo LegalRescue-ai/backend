@@ -13,14 +13,14 @@ import { JwtStrategy } from '../jwt/jwt-strategy';
   imports: [
     CognitoModule,
     SupabaseModule,
-    PassportModule.register({ defaultStrategy: 'jwt' }), // ✅ Register Passport with default 'jwt' strategy
+    PassportModule.register({ defaultStrategy: 'jwt' }), 
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'your-jwt-secret', // ✅ Use env variable for security
-      signOptions: { expiresIn: '1h' }, // Adjust token expiration
+      secret: process.env.JWT_SECRET || 'your-jwt-secret', 
+      signOptions: { expiresIn: '1h' }, 
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, S3Client, JwtStrategy], // ✅ Ensure JwtStrategy is provided
-  exports: [AuthService, JwtStrategy, PassportModule, JwtModule], // ✅ Export modules for usage
+  providers: [AuthService, S3Client, JwtStrategy], 
+  exports: [AuthService, JwtStrategy, PassportModule, JwtModule], 
 })
 export class AuthModule {}

@@ -1,8 +1,8 @@
 /* eslint-disable prettier/prettier */
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Request } from 'express';
-import * as jwt from 'jsonwebtoken'; // For decoding (not verifying)
-import * as jwkToPem from 'jwk-to-pem'; // Corrected import
+import * as jwt from 'jsonwebtoken';
+import * as jwkToPem from 'jwk-to-pem'; 
 import axios from 'axios';
 
 @Injectable()
@@ -40,7 +40,7 @@ export class JwtAuthGuard implements CanActivate {
         throw new UnauthorizedException('Invalid JWT key');
       }
 
-      const pem = jwkToPem(key); // Fixed function usage
+      const pem = jwkToPem(key);
       jwt.verify(token, pem, { algorithms: ['RS256'] });
 
       req.user = decodedToken.payload;

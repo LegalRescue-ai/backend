@@ -27,11 +27,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  /**
-   * Validates the JWT payload and fetches user information.
-   * @param payload - Decoded JWT payload.
-   * @returns User information.
-   */
+
   async validate(payload: JwtPayload) {
     try {
       const user = await this.authService.getUserInfo(payload.sub);

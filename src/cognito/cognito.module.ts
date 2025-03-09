@@ -5,7 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SupabaseModule } from '../supabase/supabase.module';
  
 @Module({
-  imports: [ConfigModule, SupabaseModule], // Import ConfigModule & SupabaseModule
+  imports: [ConfigModule, SupabaseModule], 
   providers: [
     {
       provide: 'COGNITO_CONFIG',
@@ -27,6 +27,6 @@ import { SupabaseModule } from '../supabase/supabase.module';
     },
     CognitoService,
   ],
-  exports: [CognitoService, 'COGNITO_CONFIG', 'SUPABASE_CONFIG'], // Export both
+  exports: [CognitoService, 'COGNITO_CONFIG', 'SUPABASE_CONFIG'], 
 })
 export class CognitoModule {}
