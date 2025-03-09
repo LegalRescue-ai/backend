@@ -14,18 +14,13 @@ import * as jwt from 'jsonwebtoken';
 
 @Injectable()
 export class AuthService {
-  private readonly logger = console; // Replace with a proper logger (e.g., NestJS Logger)
+  private readonly logger = console; 
 
   constructor(
     private readonly cognitoService: CognitoService,
     private readonly supabaseService: SupabaseService,
   ) {}
 
-  /**
-   * Registers a new user using Cognito and Supabase.
-   * @param registerUserDto - User registration details.
-   * @returns Success status and optional message.
-   */
   async registerUser(
     registerUserDto: CreateAuthDto,
   ): Promise<{ success: boolean; message?: string }> {
@@ -41,11 +36,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Logs in a user using Cognito.
-   * @param loginUserDto - User login credentials.
-   * @returns Authentication tokens and user info.
-   */
   async loginUser(loginUserDto: LoginUserDto) {
     try {
       const { username, password } = loginUserDto;
@@ -55,12 +45,6 @@ export class AuthService {
       throw new UnauthorizedException(error.message || 'Invalid login credentials.');
     }
   }
-
-  /**
-   * Fetches user information from Supabase using the ID token.
-   * @param idToken - Cognito ID token.
-   * @returns User information.
-   */
 
   async getUserInfo(idToken: string): Promise<any> {
     try {
@@ -93,11 +77,6 @@ export class AuthService {
   }
   
   
-  /**
-   * Refreshes the access token using a refresh token.
-   * @param refreshToken - Cognito refresh token.
-   * @returns New authentication tokens.
-   */
   async refreshAccessToken(refreshToken: string): Promise<any> {
     try {
       const newTokens = await this.cognitoService.refreshToken(refreshToken);
@@ -111,13 +90,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Changes the user's password using Cognito.
-   * @param accessToken - Cognito access token.
-   * @param currentPassword - Current password.
-   * @param newPassword - New password.
-   * @returns Success status and optional message.
-   */
   async changePassword(
     accessToken: string,
     currentPassword: string,

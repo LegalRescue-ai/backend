@@ -31,7 +31,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { JwtAuthGuard } from '../jwt/auth.guard'; // Import the JwtAuthGuard
+import { JwtAuthGuard } from '../jwt/auth.guard'; 
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { CreateAuthDto } from './dto/create-auth.dto';
 

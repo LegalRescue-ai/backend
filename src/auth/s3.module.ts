@@ -19,6 +19,6 @@ import { ConfigService } from '@nestjs/config';
       inject: [ConfigService],
     },
   ],
-  exports: [S3Client], // Export S3Client so other modules can use it
+  exports: [S3Client], 
 })
 export class S3Module {}

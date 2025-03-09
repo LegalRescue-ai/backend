@@ -2,32 +2,28 @@
 import { Injectable, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
 import * as AWS from 'aws-sdk';
-import { config } from 'dotenv'; // To load environment variables
+import { config } from 'dotenv'; 
 
-// Load environment variables from .env file if not already loaded
 config();
 
 @Injectable()
 export class ForgotPasswordService {
-  private otpStorage = new Map<string, { otp: string, expiresAt: number }>(); // Store OTP with expiration time
-
+  private otpStorage = new Map<string, { otp: string, expiresAt: number }>(); 
   cognitoIdentityServiceProvider: AWS.CognitoIdentityServiceProvider;
 
   constructor(private readonly mailerService: MailerService) {
-    // Initialize AWS Cognito SDK with explicit access keys and region from environment variables
     AWS.config.update({
       region: process.env.REGION || 'us-east-1',
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID, // Use environment variable for Access Key ID
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY, // Use environment variable for Secret Access Key
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID, 
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY, 
     });
 
     this.cognitoIdentityServiceProvider = new AWS.CognitoIdentityServiceProvider();
   }
 
-  // Send OTP to the provided email address
   async sendOtp(email: string): Promise<void> {
-    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // Generate a 6-digit OTP
-    const expiresAt = Date.now() + 5 * 60 * 1000; // OTP expires in 5 minutes
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); 
+    const expiresAt = Date.now() + 5 * 60 * 1000; 
 
     this.otpStorage.set(email, { otp, expiresAt });
 
@@ -44,7 +40,6 @@ export class ForgotPasswordService {
     }
   }
 
-  // Verify OTP and check if it is valid and not expired
   async verifyOtp(email: string, otp: string): Promise<boolean> {
     const storedOtp = this.otpStorage.get(email);
 
@@ -52,28 +47,26 @@ export class ForgotPasswordService {
       throw new BadRequestException('OTP not found or expired.');
     }
 
-    // Check if OTP is expired
     if (Date.now() > storedOtp.expiresAt) {
-      this.otpStorage.delete(email); // Clean up expired OTPs
+      this.otpStorage.delete(email); 
       throw new BadRequestException('OTP has expired.');
     }
 
-    // Check if OTP matches
     if (storedOtp.otp !== otp) {
       throw new BadRequestException('Invalid OTP');
     }
 
-    this.otpStorage.delete(email); // Remove OTP after successful verification
+    this.otpStorage.delete(email); 
     return true;
   }
 
-  // Method to reset password using Cognito API
+
   async resetPassword(email: string, newPassword: string): Promise<void> {
     const params = {
-      UserPoolId: process.env.COGNITO_USER_POOL_ID, // Get UserPoolId from environment variable
+      UserPoolId: process.env.COGNITO_USER_POOL_ID, 
       Username: email,
       Password: newPassword,
-      Permanent: true, // Set to true to indicate a permanent password change
+      Permanent: true, 
     };
 
     try {

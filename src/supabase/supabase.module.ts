@@ -16,6 +16,6 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
       },
     },
   ],
-  exports: [SupabaseService, SupabaseClient], // ✅ Export SupabaseClient
+  exports: [SupabaseService, SupabaseClient], 
 })
 export class SupabaseModule {}
