@@ -39,6 +39,7 @@ async function bootstrap() {
     origin: [
       'http://localhost:3000',
       'https://tonnel-test-client.d34j9mhleth3x6.amplifyapp.com',
+      'https://test-admin.dr6vsvn7wuzuy.amplifyapp.com'
     ],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization'],
