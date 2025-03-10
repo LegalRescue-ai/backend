@@ -148,7 +148,6 @@ export class AuthController {
   }
 
 
-  
   @UseGuards(JwtAuthGuard)
   @Get('user')
   async getUserInfo(@Req() req) {
@@ -211,8 +210,6 @@ async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
   }
 }
 
-
-
 @Post('/upload-picture')
 @UseGuards(JwtAuthGuard)
 @UseInterceptors(FileInterceptor('file', { storage: multer.memoryStorage() }))
@@ -237,16 +234,22 @@ async uploadFile(@UploadedFile() file: Express.Multer.File, @Req() req) {
     const user = req.user;
     const supabase = this.supabaseService.getClient();
 
+    // Authenticate the user in Supabase
+    await supabase.auth.signInWithIdToken({
+      provider: 'custom',
+      token: req.headers.authorization.replace('Bearer ', ''),
+    });
+
     const fileExt = file.originalname.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`; 
-    const filePath = `profile-pictures/${user.sub}/${fileName}`;
+    const fileName = `${Date.now()}.${fileExt}`;
+    const filePath = `profile_pictures/${user.sub}/${fileName}`;
 
     console.log('Uploading file to Supabase:', filePath);
 
     const { error } = await supabase.storage
-      .from('profile-pictures')
+      .from('profile_pictures')
       .upload(filePath, file.buffer, {
-        contentType: file.mimetype, 
+        contentType: file.mimetype,
         upsert: true,
       });
 
@@ -255,15 +258,17 @@ async uploadFile(@UploadedFile() file: Express.Multer.File, @Req() req) {
       throw new InternalServerErrorException('Failed to upload file to Supabase.');
     }
 
-    const fileUrl = supabase.storage.from('profile-pictures').getPublicUrl(filePath);
-    console.log('File uploaded successfully:', fileUrl);
+    // Get the URL securely
+    const { data } = supabase.storage.from('profile_pictures').getPublicUrl(filePath);
+    console.log('File uploaded successfully:', data);
 
-    return { fileUrl };
+    return { fileUrl: data };
   } catch (error) {
     console.error('Upload error:', error);
     throw new InternalServerErrorException('Error uploading profile picture.');
   }
 }
+ 
 
 
 @Post('change-password')

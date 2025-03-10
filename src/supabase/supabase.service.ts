@@ -1,10 +1,14 @@
 /* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { CreateCaseDto } from "./dto/createcase.dto";
 
 @Injectable()
 export class SupabaseService {
+  from(arg0: string) {
+    throw new Error('Method not implemented.');
+  }
   getSupabaseUrl() {
     throw new Error('Method not implemented.');
   }

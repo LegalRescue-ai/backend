@@ -48,35 +48,50 @@ export class AuthService {
 
   async getUserInfo(idToken: string): Promise<any> {
     try {
-      if (!idToken) {
-        throw new UnauthorizedException('ID Token is missing.');
-      }
+      console.log('Received ID Token:', idToken);
 
       const decodedToken = jwt.decode(idToken) as any;
-      if (!decodedToken?.sub) {
-        throw new UnauthorizedException('Invalid or expired ID token.');
+      console.log('Decoded Token:', decodedToken);
+
+      if (!decodedToken) {
+        throw new UnauthorizedException('Invalid ID Token.');
       }
 
-      const cognitoId = decodedToken.sub;
-
-      const user = await this.supabaseService.getUserByCognitoId(cognitoId);
-      if (!user) {
-        throw new NotFoundException('User not found in database.');
+      const email = decodedToken?.email;
+      if (!email) {
+        throw new UnauthorizedException('Email not found in the token.');
       }
 
-      return user;
+      console.log('Fetching user from Supabase for email:', email);
+
+      const supabase = this.supabaseService.getClient();
+      if (!supabase) {
+        throw new InternalServerErrorException('Supabase client is not initialized.');
+      }
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .single();
+
+      if (error) {
+        console.error('Supabase Query Error:', error);
+        throw new InternalServerErrorException(`Error fetching user from Supabase: ${error.message}`);
+      }
+
+      if (!data) {
+        throw new UnauthorizedException('User not found.');
+      }
+
+      console.log('User data retrieved successfully:', data);
+      return data;
     } catch (error) {
-      console.error(`Error fetching user info: ${error.message}`);
-
-      if (error instanceof UnauthorizedException || error instanceof NotFoundException) {
-        throw error;
-      }
-
-      throw new InternalServerErrorException('Error fetching user info.');
+      console.error('Error fetching user info:', error);
+      throw new InternalServerErrorException(`Error fetching user info: ${error.message}`);
     }
   }
-  
-  
+
   async refreshAccessToken(refreshToken: string): Promise<any> {
     try {
       const newTokens = await this.cognitoService.refreshToken(refreshToken);
