@@ -76,6 +76,19 @@ export class CreateCaseDto {
   @IsOptional()
   @IsBoolean()
   termsAndConditionsAccepted?: boolean;
+
+  
+  @IsOptional()
+  @IsString()
+  case_details?: string;
+
+  @IsOptional()
+  @IsString()
+  attorney_interested?: string;
+
+  @IsOptional()
+  @IsString()
+  case_views?: string;
   
   id: any;
 }

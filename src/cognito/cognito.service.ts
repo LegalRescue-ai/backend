@@ -251,36 +251,43 @@ export class CognitoService {
 
   async getUserInfo(idToken: string): Promise<any> {
     try {
+      // Decode and validate the token
       const decodedToken = jwt.decode(idToken) as any;
-  
       if (!decodedToken) {
         throw new UnauthorizedException('Invalid ID Token.');
       }
-  
-      const email = decodedToken.email;
-  
+
+      const email = decodedToken?.email;
       if (!email) {
         throw new UnauthorizedException('Email not found in the token.');
       }
-  
-      // Fetch user details from Supabase using the email
+
+      if (!this.supabase) {
+        throw new InternalServerErrorException('Supabase client is not initialized.');
+      }
+
+      // Fetch user details from Supabase
       const { data, error } = await this.supabase
         .from('users')
         .select('*')
         .eq('email', email)
         .single();
-  
-      if (error || !data) {
-        throw new InternalServerErrorException('Failed to fetch user details.');
+
+      if (error) {
+        console.error('Supabase query error:', error);
+        throw new InternalServerErrorException(`Error fetching user details: ${error.message}`);
       }
-  
+
+      if (!data) {
+        throw new UnauthorizedException('User not found.');
+      }
+
       return data;
     } catch (error) {
       console.error('Error getting user info:', error);
       throw new InternalServerErrorException(`Failed to get user info: ${error.message}`);
     }
   }
-
   
   async updateUser(accessToken: string, updatedUserAttributes: UpdateUserProfileDto): Promise<any> {
     const userAttributes = Object.entries(updatedUserAttributes)
@@ -418,7 +425,7 @@ export class CognitoService {
     newPassword: string
   ): Promise<any> {
     try {
-      const command = new ChangePasswordCommand({
+      const command = new ChangePasswordCommand({ 
         AccessToken: accessToken,
         PreviousPassword: currentPassword,
         ProposedPassword: newPassword,
