@@ -97,8 +97,6 @@ export class AttorneyAuthController {
   async getAllAttorneys(
     @Query()
     query: {
-      page?: number;
-      limit?: number;
       state?: string;
       practiceArea?: string;
       accountType?: string;
@@ -109,8 +107,6 @@ export class AttorneyAuthController {
     },
   ) {
     const {
-      page = 1,
-      limit = 10,
       state,
       practiceArea,
       accountType,
@@ -120,8 +116,6 @@ export class AttorneyAuthController {
       sortBy = 'lastName',
     } = query;
     const attorneys = await this.attorneyService.getAllAttorneys({
-      page,
-      limit,
       state,
       practiceArea,
       accountType,

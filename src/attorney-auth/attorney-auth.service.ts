@@ -218,8 +218,6 @@ export class AttorneyAuthService {
   }
 
   async getAllAttorneys(params: {
-    page: number;
-    limit: number;
     state?: string;
     practiceArea?: string;
     accountType?: string;
@@ -229,8 +227,6 @@ export class AttorneyAuthService {
     sortBy?: string;
   }) {
     const {
-      page = 1,
-      limit = 10,
       state,
       practiceArea,
       accountType,
@@ -238,8 +234,6 @@ export class AttorneyAuthService {
       isActive,
       sortBy,
     } = params;
-
-    const offset = (page - 1) * limit;
 
     let query = this.supabaseClient.from(TABLES.ATTORNEY_USERS).select(
       `
@@ -317,8 +311,6 @@ export class AttorneyAuthService {
         query = query.order('lastName');
     }
 
-    query = query.range(offset, offset + limit - 1);
-
     const { data: attorneys, error, count } = await query;
 
     if (error) {
@@ -329,12 +321,7 @@ export class AttorneyAuthService {
     return {
       attorneys,
       metadata: {
-        currentPage: page,
-        itemsPerPage: limit,
-        totalPages: Math.ceil(count / limit),
         totalAttorneys: count,
-        hasNextPage: offset + limit < count,
-        hasPreviousPage: page > 1,
         filters: {
           accountType,
           subscriptionStatus,
