@@ -224,6 +224,7 @@ export class AttorneyAuthService {
     practiceArea?: string;
     accountType?: string;
     subscriptionStatus?: string;
+    state_licensing?: string[];
     isActive?: boolean;
     sortBy?: string;
   }) {
@@ -249,14 +250,9 @@ export class AttorneyAuthService {
       firmName,
       firmAddress,
       state,
-      zipCode,
+      zipCodesSubscribed,
       email,
       phoneNumber,
-      statesLicensing::json,
-      areasOfPractice::json,
-      isAgreed,
-      countiesSubscribed::json,
-      zipCodesSubscribed::json,
       normalPrice,
       waitlistPosition,
       subscription_status,
@@ -274,9 +270,15 @@ export class AttorneyAuthService {
       messageNotifications,
       platformUpdateNotifications,
       cognitoId,
-      isActive,
+      zipCodesSubscribed,
+      countiesSubscribed,
+      areasOfPractice,
+      statesLicensing,
       accountStatus,
-      createdAt
+      isAgreed,
+      isActive,
+      created_at,
+      updated_at
     `,
       { count: 'exact' },
     );

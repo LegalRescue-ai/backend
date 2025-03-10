@@ -105,6 +105,7 @@ export class AttorneyAuthController {
       subscriptionStatus?: string;
       isActive?: boolean;
       sortBy?: string;
+      state_licensing?: string[];
     },
   ) {
     const {
@@ -114,6 +115,7 @@ export class AttorneyAuthController {
       practiceArea,
       accountType,
       subscriptionStatus,
+      state_licensing,
       isActive,
       sortBy = 'lastName',
     } = query;
@@ -124,6 +126,7 @@ export class AttorneyAuthController {
       practiceArea,
       accountType,
       subscriptionStatus,
+      state_licensing,
       isActive,
       sortBy,
     });
